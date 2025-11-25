@@ -1,0 +1,30 @@
+{
+    "app_settings": {
+        "test_mode": true,
+        "password_protected": true
+    },
+    "discord_settings": {
+        "enabled": true,
+        "webhook_alerts": "https://discord.com/api/webhooks/1442675399099416789/IxenKRRluBnGJSrT9Mypz1pztNfaUKqw3s1qj-8lr1VB1qQW0fzkzX5yivKzYzYLrv1e",
+        "webhook_occupancy": "https://discord.com/api/webhooks/1442675552732582050/i272G1Vj7sKyQky1BTk1pTeEM6tLTFEeXon0-PUb5E0eX01kpqGNgGdPPWw0ea8mppFg",
+        "webhook_screenshots": "https://discord.com/api/webhooks/1442725610186080328/Ie_CZT-nxsQDRUiFmGveWb6EuF6iTZBK0Vur4bZ1LdyP1327402M4XqmIYSZ5tWHdZkO",
+        "shop_name": "Respawn Gaming"
+    },
+    "screenshot_settings": {
+        "enabled": true,
+        "interval_minutes": 20,
+        "quality": 90,
+        "resize_ratio": 1.0
+    },
+    "targets": {
+        "router": "192.168.254.254",
+        "server": "192.168.254.100",
+        "internet": "8.8.8.8"
+    },
+    "monitor_settings": {
+        "interval_seconds": 2,
+        "pc_subnet": "192.168.254",
+        "pc_start_range": 110,
+        "pc_count": 19
+    }
+}
