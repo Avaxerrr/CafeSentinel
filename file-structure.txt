@@ -1,0 +1,29 @@
+CafeSentinel/
++--- controllers
+|    \--- system_tray_app.py
+|    
++--- models
+|    +--- app_logger.py
+|    +--- discord_notifier.py
+|    +--- event_logger.py
+|    +--- network_tools.py
+|    +--- screen_capture.py
+|    +--- sentinel_worker.py
+|    \--- startup_manager.py
+|    
++--- sentinel_logs
+|    \--- log_2025-11-25.txt
+|    
++--- views
+|    \--- main_window.py
+|    
++--- admin_guard.py
++--- config.json
++--- file-structure.txt
++--- icon.ico
++--- icon.png
++--- icon.svg
++--- icona.svg
++--- incidents_log.csv
++--- interface.py
+\--- main.py

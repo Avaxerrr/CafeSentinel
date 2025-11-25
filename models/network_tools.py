@@ -1,35 +1,31 @@
-import subprocess
-import platform
+from icmplib import multiping
+import logging
 
 
 class NetworkTools:
     @staticmethod
-    def ping(host):
+    def scan_hosts(ip_list):
         """
-        Returns True if host responds, False if timed out.
-        Optimized for Windows (hides console window).
+        Scans a list of IPs using raw ICMP sockets (requires Admin).
+        Returns a list of IP strings that are ONLINE.
         """
-        # Select flags based on OS
-        is_windows = platform.system().lower() == 'windows'
-        param = '-n' if is_windows else '-c'
-        timeout_flag = '-w' if is_windows else '-W'
-        timeout_val = '1000' if is_windows else '1'  # 1000ms or 1s
-
-        command = ['ping', param, '1', timeout_flag, timeout_val, host]
+        if not ip_list:
+            return []
 
         try:
-            # Windows specific flag to hide the popup console window
-            startupinfo = None
-            if is_windows:
-                startupinfo = subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            # multiping is concurrent and non-blocking.
+            # timeout=1: Wait max 1 second for reply.
+            # count=1: Send 1 ping per host (sufficient for status check).
+            # privileged=True: Use raw sockets (fast, no subprocess).
+            hosts = multiping(ip_list, count=1, interval=0.05, timeout=1, privileged=True)
 
-            subprocess.check_call(
-                command,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                startupinfo=startupinfo
-            )
-            return True
-        except Exception:
-            return False
+            online_ips = []
+            for host in hosts:
+                if host.is_alive:
+                    online_ips.append(host.address)
+
+            return online_ips
+
+        except Exception as e:
+            logging.error(f"Network Scan Error: {e}")
+            return []

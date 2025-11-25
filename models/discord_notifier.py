@@ -8,14 +8,13 @@ class DiscordNotifier:
         self.config = config.get('discord_settings', {})
         self.enabled = self.config.get('enabled', False)
 
-        # Load all 3 Webhooks
+        # --- LOAD WEBHOOKS ---
         self.alerts_url = self.config.get('webhook_alerts', '')
         self.occupancy_url = self.config.get('webhook_occupancy', '')
-        self.screenshots_url = self.config.get('webhook_screenshots', '')  # <--- NEW
-
+        self.screenshots_url = self.config.get('webhook_screenshots', '')
         self.shop_name = self.config.get('shop_name', 'Internet Cafe')
 
-    def _send_payload(self, url, payload, file_buffer=None, filename=None):
+    def _send_payload(self, url, payload, file_buffer=None, filename="image.webp"):
         """Generic sender"""
         if not self.enabled or not url or "YOUR_" in url:
             return
@@ -24,77 +23,48 @@ class DiscordNotifier:
             data = {'payload_json': json.dumps(payload)}
             files = None
             if file_buffer:
-                files = {'file': (filename, file_buffer, 'image/webp')}
+                mime_type = 'image/webp' if filename.endswith('webp') else 'text/plain'
+                files = {'file': (filename, file_buffer, mime_type)}
 
-            requests.post(url, data=data, files=files, timeout=10)
-        except Exception as e:
-            print(f"❌ Discord Send Error: {e}")
+            requests.post(url, data=data, files=files)
 
-    def send_screenshot_log(self, title, description, color, image_data):
-        """Sends ONLY the image to the #screenshots channel"""
-        if not image_data or not self.screenshots_url:
-            return
+        except Exception:
+            # Silent fail on network errors to avoid log clutter
+            pass
 
+    def send_outage_report(self, duration, cause, client_count, start_time, end_time, screenshot_data=None):
+        if not self.alerts_url: return
+        color = 15158332 if cause != "ROUTER_DOWN" else 16776960
+        start_str = start_time.strftime("%I:%M %p")
+        end_str = end_time.strftime("%I:%M %p")
         embed = {
-            "title": f"📸 {title}",
-            "description": description,
+            "title": f"🚨 Service Restored: {cause}",
+            "description": f"**Duration:** {duration}\n**Clients Affected:** {client_count}",
             "color": color,
-            "image": {"url": "attachment://screenshot.webp"},
-            "footer": {"text": "Visual Log • " + self.shop_name}
+            "fields": [{"name": "Start Time", "value": start_str, "inline": True},
+                       {"name": "End Time", "value": end_str, "inline": True}],
+            "footer": {"text": f"{self.shop_name} Monitor • {datetime.now().strftime('%Y-%m-%d')}"}
         }
-
-        # Unpack image data
-        buffer = image_data[0]
-        fname = image_data[1]
-
-        self._send_payload(self.screenshots_url, {"embeds": [embed]}, buffer, fname)
-
-    def send_outage_report(self, duration_str, cause, client_count, start_time, end_time, screenshot_data=None):
-        color = 15158332  # Red
-
-        # 1. Send Text Report to #ALERTS
-        embed = {
-            "title": "🚨 SERVICE RESTORED",
-            "description": f"**{self.shop_name}** is back online.",
-            "color": color,
-            "fields": [
-                {"name": "Duration", "value": duration_str, "inline": True},
-                {"name": "Cause", "value": cause, "inline": True},
-                {"name": "Impact", "value": f"**{client_count} Active Clients** affected", "inline": False},
-                {"name": "Timeframe", "value": f"{start_time.strftime('%I:%M %p')} - {end_time.strftime('%I:%M %p')}",
-                 "inline": False}
-            ],
-            "footer": {"text": "Cafe Sentinel • Automated Report"}
-        }
-
-        # Note: No image passed here
-        self._send_payload(self.alerts_url, {"embeds": [embed]})
-
-        # 2. Send Image to #SCREENSHOTS (if available)
+        payload = {"username": self.shop_name, "embeds": [embed]}
         if screenshot_data:
-            desc = f"Context for Outage: {start_time.strftime('%I:%M %p')}"
-            self.send_screenshot_log("Outage Context", desc, color, screenshot_data)
+            embed["image"] = {"url": "attachment://evidence.webp"}
+            self._send_payload(self.alerts_url, payload, screenshot_data, "evidence.webp")
+        else:
+            self._send_payload(self.alerts_url, payload)
 
-    def send_hourly_occupancy(self, active_count, total_count, screenshot_data=None):
-        color = 3066993  # Green
-        percent = int((active_count / total_count) * 100) if total_count > 0 else 0
-
-        # 1. Send Text Report to #OCCUPANCY
+    def send_hourly_occupancy(self, current_clients, total_pcs, screenshot_data=None):
+        if not self.occupancy_url: return
+        percent = int((current_clients / total_pcs) * 100)
         embed = {
             "title": "📊 Hourly Occupancy Report",
-            "color": color,
-            "fields": [
-                {"name": "Active Clients", "value": f"{active_count} / {total_count}", "inline": True},
-                {"name": "Utilization", "value": f"{percent}%", "inline": True}
-            ],
-            "timestamp": datetime.utcnow().isoformat(),
-            "footer": {"text": "Cafe Sentinel • Hourly Check"}
+            "description": f"**Active Clients:** {current_clients} / {total_pcs}\n**Utilization:** {percent}%",
+            "color": 3066993,
+            "footer": {"text": f"{self.shop_name} • {datetime.now().strftime('%I:%M %p')}"}
         }
-
-        # Note: No image passed here
-        self._send_payload(self.occupancy_url, {"embeds": [embed]})
-
-        # 2. Send Image to #SCREENSHOTS (if available)
+        payload = {"username": self.shop_name, "embeds": [embed]}
+        target_url = self.screenshots_url if (self.screenshots_url and screenshot_data) else self.occupancy_url
         if screenshot_data:
-            desc = f"Routine Check: {active_count}/{total_count} Clients Active"
-            self.send_screenshot_log("Hourly Visual Check", desc, color, screenshot_data)
+            embed["image"] = {"url": "attachment://status.webp"}
+            self._send_payload(target_url, payload, screenshot_data, "status.webp")
+        else:
+            self._send_payload(target_url, payload)

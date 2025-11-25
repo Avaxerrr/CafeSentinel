@@ -4,7 +4,6 @@ from PySide6.QtCore import Qt, Signal, QTimer, QDateTime, QSettings  # <--- Adde
 from PySide6.QtGui import QColor, QPalette, QIcon, QFont
 
 
-# --- [Keep StatusLight and PCBox classes exactly the same] ---
 class StatusLight(QFrame):
     def __init__(self, label_text):
         super().__init__()

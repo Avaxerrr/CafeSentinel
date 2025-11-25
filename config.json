@@ -12,7 +12,7 @@
     },
     "screenshot_settings": {
         "enabled": true,
-        "interval_minutes": 20,
+        "interval_minutes": 10,
         "quality": 90,
         "resize_ratio": 1.0
     },
