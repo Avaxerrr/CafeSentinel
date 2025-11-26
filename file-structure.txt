@@ -12,28 +12,24 @@ CafeSentinel/
 |    +--- screen_capture.py
 |    +--- security_manager.py
 |    +--- sentinel_worker.py
+|    +--- session_manager.py
 |    \--- startup_manager.py
-|    
-+--- sentinel_logs
-|    +--- log_2025-11-25.txt
-|    \--- log_2025-11-26.txt
+|
 |    
 +--- utils
+|    +--- __init__.py
 |    \--- resource_manager.py
 |    
 +--- views
 |    +--- __init__.py
 |    +--- main_window.py
 |    \--- setup_wizard.py
-|    
-+--- admin_guard (NOT NEEDED).py
+|
 +--- build.py
-+--- build_unified.py
 +--- config.json
 +--- file-structure.txt
 +--- icon.ico
 +--- icon.png
 +--- icon.svg
-+--- icona.svg
 +--- interface.py
 \--- watchdog_service.py

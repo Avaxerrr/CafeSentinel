@@ -5,17 +5,18 @@ from datetime import datetime
 
 class DiscordNotifier:
     def __init__(self, config):
+        self.update_config(config)
+
+    def update_config(self, config):
+        """Reload settings from new config dict."""
         self.config = config.get('discord_settings', {})
         self.enabled = self.config.get('enabled', False)
-
-        # --- LOAD WEBHOOKS ---
         self.alerts_url = self.config.get('webhook_alerts', '')
         self.occupancy_url = self.config.get('webhook_occupancy', '')
         self.screenshots_url = self.config.get('webhook_screenshots', '')
         self.shop_name = self.config.get('shop_name', 'Internet Cafe')
 
     def _send_payload(self, url, payload, file_buffer=None, filename="image.webp"):
-        """Generic sender"""
         if not self.enabled or not url or "YOUR_" in url:
             return
 
@@ -27,44 +28,96 @@ class DiscordNotifier:
                 files = {'file': (filename, file_buffer, mime_type)}
 
             requests.post(url, data=data, files=files)
-
         except Exception:
-            # Silent fail on network errors to avoid log clutter
             pass
+
+    # --- ALERT METHODS ---
 
     def send_outage_report(self, duration, cause, client_count, start_time, end_time, screenshot_data=None):
         if not self.alerts_url: return
-        color = 15158332 if cause != "ROUTER_DOWN" else 16776960
+        color = 15158332 if "ROUTER" not in cause else 16776960
         start_str = start_time.strftime("%I:%M %p")
         end_str = end_time.strftime("%I:%M %p")
+
+        title = "🚨 Service Restored"
+        if "ROUTER" in cause: title = "🚨 Router Restored"
+        elif "SERVER" in cause: title = "🚨 Server Restored"
+        elif "ISP" in cause: title = "🚨 Internet Restored"
+
         embed = {
-            "title": f"🚨 Service Restored: {cause}",
-            "description": f"**Duration:** {duration}\n**Clients Affected:** {client_count}",
+            "title": title,
+            "description": f"**Duration:** {duration}\n**Clients Active:** {client_count}",
             "color": color,
             "fields": [{"name": "Start Time", "value": start_str, "inline": True},
                        {"name": "End Time", "value": end_str, "inline": True}],
             "footer": {"text": f"{self.shop_name} Monitor • {datetime.now().strftime('%Y-%m-%d')}"}
         }
         payload = {"username": self.shop_name, "embeds": [embed]}
+
         if screenshot_data:
             embed["image"] = {"url": "attachment://evidence.webp"}
             self._send_payload(self.alerts_url, payload, screenshot_data, "evidence.webp")
         else:
             self._send_payload(self.alerts_url, payload)
 
-    def send_hourly_occupancy(self, current_clients, total_pcs, screenshot_data=None):
+    def send_session_start(self, pc_list):
         if not self.occupancy_url: return
-        percent = int((current_clients / total_pcs) * 100)
+
+        count = len(pc_list)
+        if count > 5:
+            desc = f"**+{count} Clients Came Online**"
+        else:
+            names = ", ".join(pc_list)
+            desc = f"**New Sessions:** {names}"
+
         embed = {
-            "title": "📊 Hourly Occupancy Report",
-            "description": f"**Active Clients:** {current_clients} / {total_pcs}\n**Utilization:** {percent}%",
-            "color": 3066993,
+            "title": "🟢 New Activity",
+            "description": desc,
+            "color": 5763719, # Green
+            "footer": {"text": f"{self.shop_name} • {datetime.now().strftime('%I:%M %p')}"}
+        }
+        self._send_payload(self.occupancy_url, {"username": self.shop_name, "embeds": [embed]})
+
+    def send_session_end(self, pc_data_list):
+        if not self.occupancy_url: return
+
+        count = len(pc_data_list)
+
+        if count > 5:
+             desc = f"**-{count} Clients Went Offline**"
+        else:
+            lines = []
+            for name, duration in pc_data_list:
+                lines.append(f"• **{name}** ({duration})")
+            desc = "\n".join(lines)
+
+        embed = {
+            "title": "🔴 Session Ended",
+            "description": desc,
+            "color": 15548997, # Red
+            "footer": {"text": f"{self.shop_name} • {datetime.now().strftime('%I:%M %p')}"}
+        }
+        self._send_payload(self.occupancy_url, {"username": self.shop_name, "embeds": [embed]})
+
+    def send_hourly_snapshot(self, current, total):
+        if not self.occupancy_url: return
+        percent = int((current / total) * 100)
+        embed = {
+            "title": "📊 Hourly Snapshot",
+            "description": f"**Active Clients:** {current} / {total}\n**Utilization:** {percent}%",
+            "color": 3066993, # Blue
+            "footer": {"text": f"{self.shop_name} • {datetime.now().strftime('%I:%M %p')}"}
+        }
+        self._send_payload(self.occupancy_url, {"username": self.shop_name, "embeds": [embed]})
+
+    def send_routine_screenshot(self, screenshot_data):
+        if not self.screenshots_url or not screenshot_data: return
+
+        embed = {
+            "title": "📷 Routine Screenshot",
+            "color": 9807270, # Gray
+            "image": {"url": "attachment://routine.webp"},
             "footer": {"text": f"{self.shop_name} • {datetime.now().strftime('%I:%M %p')}"}
         }
         payload = {"username": self.shop_name, "embeds": [embed]}
-        target_url = self.screenshots_url if (self.screenshots_url and screenshot_data) else self.occupancy_url
-        if screenshot_data:
-            embed["image"] = {"url": "attachment://status.webp"}
-            self._send_payload(target_url, payload, screenshot_data, "status.webp")
-        else:
-            self._send_payload(target_url, payload)
+        self._send_payload(self.screenshots_url, payload, screenshot_data, "routine.webp")
