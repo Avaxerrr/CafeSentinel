@@ -40,12 +40,21 @@ class SentinelWorker(QObject):
 
         AppLogger.log(f"CFG_LOAD: Interval_T1={self.routine_interval_minutes}m | Buffer_Mode=LOCAL")
 
-    def load_config(self, path):
+    def load_config(self, config_path):
+        """Load configuration from JSON file."""
         try:
-            with open(path, 'r') as f:
-                return json.load(f)
+            # Use ResourceManager to get the correct path
+            from utils.resource_manager import ResourceManager
+            full_path = ResourceManager.get_resource_path(config_path)
+
+            with open(full_path, 'r') as f:
+                config = json.load(f)
+
+            interval_minutes = config.get('screenshot_settings', {}).get('interval_minutes', 60)
+            AppLogger.log(f"CFG_LOAD: Interval_T1={interval_minutes}m | Buffer_Mode=LOCAL")
+            return config
         except Exception as e:
-            AppLogger.log(f"ERR_IO: Config read failure: {e}")
+            AppLogger.log(f"CFG_ERROR: {e}")
             return {}
 
     def generate_pc_list(self):

@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import datetime
+from utils.resource_manager import ResourceManager
 
 
 class AppLogger:
@@ -8,12 +9,8 @@ class AppLogger:
 
     @staticmethod
     def get_log_path():
-        # Determine folder (Exe vs Script)
-        if getattr(sys, 'frozen', False):
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+        """Get the path to today's log file."""
+        base_dir = ResourceManager.get_base_dir()
         log_dir = os.path.join(base_dir, "sentinel_logs")
 
         if not os.path.exists(log_dir):
@@ -33,10 +30,10 @@ class AppLogger:
         # 1. Print to Console
         print(full_msg)
 
-        # 2. Append to File (Open/Close immediately to ensure save)
-        path = AppLogger.get_log_path()
+        # 2. Append to File
         try:
-            with open(path, "a", encoding="utf-8") as f:
-                f.write(full_msg + "\n")
+            log_path = AppLogger.get_log_path()
+            with open(log_path, 'a', encoding='utf-8') as f:
+                f.write(full_msg + '\n')
         except Exception as e:
-            print(f"LOGGING ERROR: {e}")
+            print(f"⚠️ Log Write Failed: {e}")

@@ -2,63 +2,52 @@ import subprocess
 import sys
 import os
 import logging
+import winreg
 
 
 class StartupManager:
     TASK_NAME = "CafeSentinelMonitor"
+    REG_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    REG_NAME = "CafeSentinel"
 
     @staticmethod
     def ensure_startup():
         """
-        Registers the application in Windows Task Scheduler to run
-        with HIGHEST privileges on user logon.
-        Handles both .py script and frozen .exe execution.
+        Registers startup via TWO methods for redundancy:
+        1. Windows Registry (Run Key)
+        2. Task Scheduler (Highest Privileges)
         """
-        # 1. Determine the correct execution command
-        if getattr(sys, 'frozen', False):
-            # Running as compiled EXE
-            exe_path = sys.executable
-            action = f'"{exe_path}"'
-            logging.info(f"⚙️ Startup Mode: EXE Detected ({exe_path})")
-        else:
-            # Running as Python Script
-            # We want to launch 'main.py' (The Watchdog), not the current script if it's different
-            current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            target_script = os.path.join(current_dir, "main.py")
-            python_exe = sys.executable
-            action = f'"{python_exe}" "{target_script}"'
-            logging.info(f"⚙️ Startup Mode: Script Detected ({target_script})")
+        if not getattr(sys, 'frozen', False):
+            return  # Skip in dev mode
 
-        # 2. Check if task already exists
-        check_cmd = f'schtasks /query /tn "{StartupManager.TASK_NAME}"'
-        try:
-            subprocess.check_output(check_cmd, stderr=subprocess.STDOUT)
-            logging.info(f"✅ Startup task '{StartupManager.TASK_NAME}' is already active.")
+        # Locate the Watchdog Executable
+        base_dir = os.path.dirname(sys.executable)  # Deploy/CafeSentinel
+        deploy_root = os.path.dirname(base_dir)  # Deploy/
+        watchdog_exe = os.path.join(deploy_root, "SentinelService", "SentinelService.exe")
+
+        if not os.path.exists(watchdog_exe):
+            logging.error(f"❌ Startup Error: Could not find {watchdog_exe}")
             return
-        except subprocess.CalledProcessError:
-            pass  # Task not found, proceed to create
 
-        logging.info(f"⚙️ Creating startup task '{StartupManager.TASK_NAME}'...")
+        exe_path = f'"{watchdog_exe}"'
 
-        # 3. Create Task
-        # /sc ONLOGON = Run when user logs in
-        # /rl HIGHEST = Run as Admin
-        # /f = Force overwrite
-        create_cmd = [
-            "schtasks", "/create",
-            "/tn", StartupManager.TASK_NAME,
-            "/tr", action,
-            "/sc", "ONLOGON",
-            "/rl", "HIGHEST",
-            "/f"
-        ]
-
+        # --- METHOD 1: Registry Run Key ---
         try:
-            # Hide the console window for the command
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            # Open the Run key
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, StartupManager.REG_PATH, 0, winreg.KEY_SET_VALUE)
+            winreg.SetValueEx(key, StartupManager.REG_NAME, 0, winreg.REG_SZ, exe_path)
+            winreg.CloseKey(key)
+            logging.info("✅ Registry Startup Key Set")
+        except Exception as e:
+            logging.error(f"❌ Registry Set Failed: {e}")
 
-            subprocess.check_call(create_cmd, startupinfo=startupinfo, stdout=subprocess.DEVNULL)
-            logging.info("✅ Successfully added application to Windows Startup.")
-        except subprocess.CalledProcessError as e:
-            logging.error(f"❌ Failed to create startup task: {e}")
+        # --- METHOD 2: Task Scheduler (Force Update) ---
+        create_cmd = (
+            f'schtasks /create /tn "{StartupManager.TASK_NAME}" '
+            f'/tr "{exe_path}" '
+            f'/sc ONLOGON '
+            f'/rl HIGHEST '
+            f'/f'
+        )
+        subprocess.call(create_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logging.info("✅ Task Scheduler Entry Updated")

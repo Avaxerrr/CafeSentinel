@@ -1,98 +1,93 @@
-import subprocess
 import sys
-import time
-import os
 import ctypes
-
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox, QDialog
 
 from controllers.system_tray_app import SystemTrayController
 from models.startup_manager import StartupManager
-
-# CONFIGURATION
-TARGET_SCRIPT = "interface.py"
+from models.security_manager import SecurityManager
+from views.setup_wizard import SetupWizard
 
 
 def is_admin():
-    """Check if the Watchdog itself has Admin rights"""
+    """Check if the script has Admin rights."""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
         return False
 
 
-def run_watchdog():
-    # 1. Determine what to launch
-    if getattr(sys, 'frozen', False):
-        # If we are an EXE, we launch ourselves with a special flag OR
-        # if you packaged interface.py separately, we launch that.
-        # simplest for now: Assume you will compile 'interface.py' as the main EXE?
-        # NO, main.py is the entry.
+def check_and_create_vault():
+    """
+    Check if the security vault exists.
+    If not, launch the setup wizard to create it.
+    Returns True if vault is ready, False if setup was cancelled.
+    """
+    if SecurityManager.vault_exists():
+        return True  # Vault already exists
 
-        # For now, let's assume we are running the script logic.
-        # If you make an EXE, you should point PyInstaller to 'interface.py' directly
-        # AND use a --uac-admin flag, and rely on the Restart logic inside interface.py
-        # But you wanted the Watchdog...
+    # Show setup wizard
+    wizard = SetupWizard()
+    if wizard.exec() == QDialog.Accepted:  # Use QDialog.Accepted
+        admin_pwd, privacy_pwd = wizard.get_passwords()
 
-        # Let's stick to script logic for safety until you clarify your build process.
-        base_path = os.path.dirname(sys.executable)
+        # Create the vault
+        success = SecurityManager.create_vault(admin_pwd, privacy_pwd)
+
+        if success:
+            QMessageBox.information(
+                None,
+                "Setup Complete",
+                "Security vault created successfully!\n\n"
+                "The application will now start."
+            )
+            return True
+        else:
+            QMessageBox.critical(
+                None,
+                "Setup Failed",
+                "Failed to create security vault.\n"
+                "The application cannot start."
+            )
+            return False
     else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
+        # User cancelled setup
+        QMessageBox.warning(
+            None,
+            "Setup Cancelled",
+            "Setup was cancelled.\n"
+            "The application requires initial configuration to run."
+        )
+        return False
 
-    script_path = os.path.join(base_path, TARGET_SCRIPT)
 
-    print(f"🛡️ WATCHDOG STARTED: Protecting {TARGET_SCRIPT}...")
-    print("If you kill the app, I will resurrect it.")
+def main():
+    # 1. Check Admin Privileges
+    if not is_admin():
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", sys.executable, " ".join(sys.argv), None, 1
+        )
+        sys.exit(0)
 
-    while True:
-        # 2. Launch the GUI as a subprocess
-        try:
-            if getattr(sys, 'frozen', False):
-                # If frozen, we can't easily call 'python interface.py'.
-                # You might need to build TWO exes: 'Watchdog.exe' and 'CafeSentinel.exe'.
-                # For now, let's print a warning if frozen.
-                print("⚠️ WARNING: Watchdog logic in single-file EXE requires specialized build.")
-                # Fallback: Just run the script logic if files exist
-                p = subprocess.Popen([sys.executable, script_path])
-            else:
-                p = subprocess.Popen([sys.executable, script_path])
+    # 2. Initialize Qt Application
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)  # Keep running when window is closed
 
-            # 3. Wait for the GUI to close
-            exit_code = p.wait()
+    # 3. Check/Create Security Vault
+    if not check_and_create_vault():
+        sys.exit(1)  # Exit if setup failed or was cancelled
 
-            # 4. DECIDE: Restart or Quit?
-            if exit_code == 0:
-                print("✅ CLEAN EXIT DETECTED. Watchdog ending.")
-                break
-            else:
-                print(f"⚠️ ABNORMAL TERMINATION (Code {exit_code}).")
-                print("Resurrecting app in 1 second...")
-                time.sleep(1)
+    # 4. Register in Startup (Task Scheduler)
+    try:
+        StartupManager.ensure_startup()
+    except Exception as e:
+        print(f"Startup registration failed: {e}")
 
-        except Exception as e:
-            print(f"❌ Watchdog Error: {e}")
-            time.sleep(5)
+    # 5. Launch the System Tray Controller
+    controller = SystemTrayController(app)
+
+    # 6. Run the application
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    # 1. Check Admin Rights (Elevate if needed, but usually Watchdog handles this)
-    if not is_admin():
-        print("Requesting Admin Privileges...")
-        try:
-            ctypes.windll.shell32.ShellExecuteW(
-                None, "runas", sys.executable, f'"{os.path.abspath(__file__)}"', None, 1
-            )
-        except:
-            print("Failed to elevate.")
-        sys.exit()
-
-    # 2. Register Startup (Safe to do here)
-    StartupManager.ensure_startup()
-
-    # 3. Run App
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False)
-
-    controller = SystemTrayController(app)
-
-    sys.exit(app.exec())
+    main()
