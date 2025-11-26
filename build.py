@@ -113,8 +113,19 @@ class SeparateFoldersBuilder:
             (main_dest / "interface.exe").rename(main_dest / "CafeSentinel.exe")
 
             # Copy resources
+            print("   Copying resources...")
             shutil.copy2(self.project_root / "config.json", main_dest / "config.json")
-            shutil.copy2(self.project_root / "icon.svg", main_dest / "icon.svg")
+
+            # Optional icon check
+            if (self.project_root / "icon.svg").exists():
+                shutil.copy2(self.project_root / "icon.svg", main_dest / "icon.svg")
+
+            # --- NEW: Copy the Installer Script ---
+            if (self.project_root / "install_monitor.bat").exists():
+                shutil.copy2(self.project_root / "install_monitor.bat", main_dest / "install_monitor.bat")
+                print("   ✓ Included install_monitor.bat")
+            else:
+                print("   ⚠️ install_monitor.bat not found (skipped)")
 
             print("   ✓ CafeSentinel/ folder created")
 
@@ -177,14 +188,15 @@ Set WshShell = Nothing
         print(f"   {deploy_root}/")
         print("   ├── CafeSentinel/")
         print("   │   ├── CafeSentinel.exe")
+        print("   │   ├── install_monitor.bat (RUN THIS ONCE)")
         print("   │   ├── config.json")
         print("   │   └── (DLLs)")
         print("   ├── SentinelService/")
         print("   │   ├── SentinelService.exe")
         print("   │   └── (DLLs)")
-        print("   └── START_SENTINEL.vbs (Run this!)")
+        print("   └── START_SENTINEL.vbs (Alternate Launcher)")
         print("\n🚀 To deploy: Copy entire CafeSentinel_Deploy folder")
-        print("🚀 To run: Double-click START_SENTINEL.vbs (It will be invisible)\n")
+        print("🚀 To install: Open CafeSentinel folder -> Run install_monitor.bat as Admin\n")
 
         return True
 

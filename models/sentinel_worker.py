@@ -12,47 +12,40 @@ from models.app_logger import AppLogger
 
 
 class SentinelWorker(QObject):
-    sig_status_update = Signal(str, str, str, bool)
+    # Updated Signal: timestamp, router_ok, server_ok, isp_ok
+    sig_status_update = Signal(str, bool, bool, bool)
     sig_pc_update = Signal(list)
 
     def __init__(self, config_path="config.json"):
         super().__init__()
         self.running = True
-
-        # If True, routine screenshots are skipped. Incidents still capture.
         self.privacy_mode = False
 
-        AppLogger.log("SYS_INIT: Kernel thread attached.")
+        AppLogger.log("SYS_INIT: Kernel thread attached (Independent Mode).")
 
         self.config = self.load_config(config_path)
         self.pc_list = self.generate_pc_list()
 
-        self.last_status = "ONLINE"
-        self.incident_start_time = None
+        # --- Independent Incident Timers ---
+        self.router_down_start = None
+        self.server_down_start = None
+        self.isp_down_start = None
+
         self.current_client_count = 0
 
         self.notifier = DiscordNotifier(self.config)
         self.camera = ScreenCapture(self.config)
 
-        # --- TIMERS (Only Screenshot remains) ---
+        # Routine Screenshot Timer
         self.last_routine_check = datetime.now()
         self.routine_interval_minutes = self.config.get('screenshot_settings', {}).get('interval_minutes', 60)
 
-        AppLogger.log(f"CFG_LOAD: Interval_T1={self.routine_interval_minutes}m | Buffer_Mode=LOCAL")
-
     def load_config(self, config_path):
-        """Load configuration from JSON file."""
         try:
-            # Use ResourceManager to get the correct path
             from utils.resource_manager import ResourceManager
             full_path = ResourceManager.get_resource_path(config_path)
-
             with open(full_path, 'r') as f:
-                config = json.load(f)
-
-            interval_minutes = config.get('screenshot_settings', {}).get('interval_minutes', 60)
-            AppLogger.log(f"CFG_LOAD: Interval_T1={interval_minutes}m | Buffer_Mode=LOCAL")
-            return config
+                return json.load(f)
         except Exception as e:
             AppLogger.log(f"CFG_ERROR: {e}")
             return {}
@@ -70,8 +63,6 @@ class SentinelWorker(QObject):
 
         if elapsed.total_seconds() > (self.routine_interval_minutes * 60):
             self.last_routine_check = now
-
-            # "Routine Screenshot" -> "Visual telemetry sync"
             AppLogger.log(f"TASK_SCHED: Executing V-Telemetry Sync ({self.routine_interval_minutes}m)")
             img_data, _ = self.camera.capture_to_memory()
 
@@ -81,35 +72,41 @@ class SentinelWorker(QObject):
                 screenshot_data=img_data
             )
 
-    def handle_state_change(self, new_status):
-        current_time = datetime.now()
+    def _process_component(self, name, is_online, down_start_time):
+        # Generic logic to handle an incident for a component.
+        # Returns: The new down_start_time (None if online/resolved, datetime if down)
+        now = datetime.now()
 
-        if self.last_status == "ONLINE" and new_status != "ONLINE":
-            self.incident_start_time = current_time
-            AppLogger.log(f"STATE_CHANGE: [ONLINE] -> [{new_status}] | FLAG: CRITICAL")
+        # CASE 1: Component Just Died
+        if not is_online and down_start_time is None:
+            AppLogger.log(f"ALERT: {name} DOWN | Timer Started")
+            return now  # Start the timer
 
-        elif self.last_status != "ONLINE" and new_status == "ONLINE":
-            if self.incident_start_time:
-                AppLogger.log(f"STATE_CHANGE: [{self.last_status}] -> [ONLINE] | RECOVERY_ACK")
+        # CASE 2: Component Just Recovered
+        elif is_online and down_start_time is not None:
+            duration = now - down_start_time
+            duration_str = str(duration).split('.')[0]
 
-                EventLogger.log_resolution(self.incident_start_time, current_time, self.last_status)
-                img_data, _ = self.camera.capture_to_memory()
-                duration = current_time - self.incident_start_time
-                duration_str = str(duration).split('.')[0]
+            AppLogger.log(f"RECOVERY: {name} Restored | Duration: {duration_str}")
 
-                self.notifier.send_outage_report(
-                    duration_str, self.last_status, self.current_client_count,
-                    self.incident_start_time, current_time, screenshot_data=img_data
-                )
-                self.incident_start_time = None
+            # Log to CSV
+            EventLogger.log_resolution(down_start_time, now, f"{name}_DOWN")
 
-        self.last_status = new_status
+            # Capture evidence
+            img_data, _ = self.camera.capture_to_memory()
 
-    def stop(self):
-        self.running = False
+            # Send Discord Alert
+            self.notifier.send_outage_report(
+                duration_str, f"{name}_DOWN", self.current_client_count,
+                down_start_time, now, screenshot_data=img_data
+            )
+            return None  # Reset timer
+
+        # CASE 3: No Change (Still Down or Still Up)
+        return down_start_time
 
     def start_monitoring(self):
-        AppLogger.log("DAEMON: Main loop sequence initiated [PID: ACTIVE]")
+        AppLogger.log("DAEMON: Independent Monitoring Active")
 
         targets = self.config.get('targets', {})
         monitor_settings = self.config.get('monitor_settings', {})
@@ -124,7 +121,7 @@ class SentinelWorker(QObject):
             timestamp = datetime.now().strftime("%H:%M:%S")
 
             try:
-                # 1. Scan Clients
+                # 1. Scan Clients (Background)
                 online_clients = NetworkTools.scan_hosts(self.pc_list)
                 self.current_client_count = len(online_clients)
 
@@ -134,43 +131,48 @@ class SentinelWorker(QObject):
                     gui_client_data.append({"name": f"PC-{i + 1}", "ip": ip, "is_alive": is_alive})
                 self.sig_pc_update.emit(gui_client_data)
 
-                # 2. Scan Infra
+                # 2. Independent Infrastructure Scans
+                # We ping them individually or in a batch, but process results independently
                 infra_status = NetworkTools.scan_hosts([router_ip, server_ip, internet_ip])
+
                 router_ok = router_ip in infra_status
                 server_ok = server_ip in infra_status
-                internet_ok = internet_ip in infra_status
 
-                # 3. Logic
-                current_status = "ONLINE"
-                gui_comp = "SYSTEM"
-                gui_msg = "ONLINE"
-                gui_err = False
+                # Logic: If Router is DOWN, we physically cannot ping Internet.
+                # We force internet_ok to False, but we manage the alert logic separately.
+                actual_internet_ping = internet_ip in infra_status
 
                 if not router_ok:
-                    current_status = "ROUTER_DOWN"
-                    gui_comp = "ROUTER"
-                    gui_msg = "GATEWAY LOST"
-                    gui_err = True
-                elif not server_ok:
-                    current_status = "SERVER_DOWN"
-                    gui_comp = "SERVER"
-                    gui_msg = "SERVER LOST"
-                    gui_err = True
-                elif not internet_ok:
-                    current_status = "ISP_DOWN"
-                    gui_comp = "ISP"
-                    gui_msg = "NO INTERNET"
-                    gui_err = True
+                    # If router is down, internet is effectively down.
+                    internet_ok = False
+                else:
+                    # If router is up, trust the ping
+                    internet_ok = actual_internet_ping
 
-                self.handle_state_change(current_status)
+                # 3. Incident Processing
+
+                # Router
+                self.router_down_start = self._process_component("ROUTER", router_ok, self.router_down_start)
+
+                # Server (Independent)
+                self.server_down_start = self._process_component("SERVER", server_ok, self.server_down_start)
+
+                # ISP (Dependent Logic)
+                # Only trigger ISP Alert if Router is UP but Internet is DOWN
+                if router_ok:
+                    self.isp_down_start = self._process_component("ISP", internet_ok, self.isp_down_start)
+                else:
+                    # If Router is down, we don't blame the ISP yet.
+                    pass
+
+                # 4. Emit GUI Update (Raw Status)
+                self.sig_status_update.emit(timestamp, router_ok, server_ok, internet_ok)
+
+                # 5. Routine Checks
                 self.handle_routine_check()
 
-                # No handle_log_upload() call here anymore!
-
-                self.sig_status_update.emit(timestamp, gui_comp, gui_msg, gui_err)
-
             except Exception as e:
-                AppLogger.log(f"EXCEPT_THROW: Loop Runtime Fault: {e}")
+                AppLogger.log(f"EXCEPT: {e}")
 
             elapsed = time.time() - loop_start
             sleep_time = max(0.1, interval - elapsed)

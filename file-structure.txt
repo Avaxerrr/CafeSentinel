@@ -1,29 +1,39 @@
 CafeSentinel/
 +--- controllers
+|    +--- __init__.py
 |    \--- system_tray_app.py
 |    
 +--- models
+|    +--- __init__.py
 |    +--- app_logger.py
 |    +--- discord_notifier.py
 |    +--- event_logger.py
 |    +--- network_tools.py
 |    +--- screen_capture.py
+|    +--- security_manager.py
 |    +--- sentinel_worker.py
 |    \--- startup_manager.py
 |    
 +--- sentinel_logs
-|    \--- log_2025-11-25.txt
+|    +--- log_2025-11-25.txt
+|    \--- log_2025-11-26.txt
+|    
++--- utils
+|    \--- resource_manager.py
 |    
 +--- views
-|    \--- main_window.py
+|    +--- __init__.py
+|    +--- main_window.py
+|    \--- setup_wizard.py
 |    
-+--- admin_guard.py
++--- admin_guard (NOT NEEDED).py
++--- build.py
++--- build_unified.py
 +--- config.json
 +--- file-structure.txt
 +--- icon.ico
 +--- icon.png
 +--- icon.svg
 +--- icona.svg
-+--- incidents_log.csv
 +--- interface.py
-\--- main.py
+\--- watchdog_service.py

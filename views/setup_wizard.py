@@ -7,7 +7,7 @@ from PySide6.QtGui import QFont
 class SetupWizard(QDialog):
     """
     First-run setup dialog to collect Admin and Privacy passwords.
-    Only appears when d3dconfig.dll does not exist.
+    Only appears when .dll does not exist.
     """
 
     def __init__(self):
