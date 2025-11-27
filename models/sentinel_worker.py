@@ -13,7 +13,9 @@ from models.session_manager import SessionManager
 
 
 class SentinelWorker(QObject):
+    # Signal signature: timestamp, router_ok, server_ok, internet_ok
     sig_status_update = Signal(str, bool, bool, bool)
+    # Signal signature: List of dicts [{'name': 'PC-1', 'ip': '...', 'is_alive': True}]
     sig_pc_update = Signal(list)
 
     def __init__(self, config_path="config.json"):
@@ -24,7 +26,7 @@ class SentinelWorker(QObject):
         AppLogger.log("SYS_INIT: Kernel thread attached (Hot-Reload Active).")
 
         self.config_path_rel = config_path
-        self.config_abs_path = None # Set in load_config
+        self.config_abs_path = None  # Set in load_config
         self.last_cfg_mtime = 0
 
         self.config = self.load_config(config_path)
@@ -85,7 +87,7 @@ class SentinelWorker(QObject):
                 # 1. Update Sub-Modules
                 self.notifier.update_config(self.config)
                 self.session_manager.update_config(self.config)
-                self.camera = ScreenCapture(self.config) # Re-init camera with new settings
+                self.camera = ScreenCapture(self.config)  # Re-init camera with new settings
 
                 # 2. Update Locals
                 self.screenshot_interval = self.config.get('screenshot_settings', {}).get('interval_minutes', 60)
@@ -97,9 +99,9 @@ class SentinelWorker(QObject):
                 AppLogger.log("CFG_WATCH: Hot Reload Complete.")
 
         except json.JSONDecodeError:
-             AppLogger.log("CFG_WATCH: ⚠️ JSON Syntax Error. Keep using old config.")
+            AppLogger.log("CFG_WATCH: ⚠️ JSON Syntax Error. Keep using old config.")
         except Exception as e:
-             AppLogger.log(f"CFG_WATCH: Update Failed: {e}")
+            AppLogger.log(f"CFG_WATCH: Update Failed: {e}")
 
     def _update_verification_settings(self):
         self.verify_cfg = self.config.get('verification_settings', {})
@@ -137,7 +139,6 @@ class SentinelWorker(QObject):
             results = NetworkTools.scan_hosts([target_ip, self.secondary_dns])
             primary_ok = target_ip in results
             secondary_ok = self.secondary_dns in results
-
             if not primary_ok and not secondary_ok:
                 return True
             else:
@@ -183,22 +184,12 @@ class SentinelWorker(QObject):
             timestamp = datetime.now().strftime("%H:%M:%S")
 
             try:
-                # 0. Check for Config Changes (NEW)
+                # 0. Check for Config Changes
                 self.check_hot_reload()
 
-                # 1. Scan Clients
-                online_clients = NetworkTools.scan_hosts(self.pc_list)
-                self.current_client_count = len(online_clients)
+                # --- REORDERED: STEP 1 INFRASTRUCTURE SCAN ---
+                # We must check Infrastructure FIRST to decide if we can trust the PC scan.
 
-                gui_client_data = []
-                for i, ip in enumerate(self.pc_list):
-                    is_alive = ip in online_clients
-                    gui_client_data.append({"name": f"PC-{i + 1}", "ip": ip, "is_alive": is_alive})
-                self.sig_pc_update.emit(gui_client_data)
-
-                self.session_manager.process_scan(online_clients, self.pc_list)
-
-                # 2. Infrastructure Scan
                 # RE-READ targets in case config changed
                 targets = self.config.get('targets', {})
                 router_ip = targets.get('router', '192.168.1.1')
@@ -211,7 +202,7 @@ class SentinelWorker(QObject):
                 server_ok = server_ip in infra_status
                 internet_raw_ok = internet_ip in infra_status
 
-                # 3. VERIFICATION LOGIC
+                # --- VERIFICATION LOGIC (Moved Up) ---
                 if not router_ok:
                     if not self._verify_component(router_ip, "ROUTER"): router_ok = True
 
@@ -220,24 +211,48 @@ class SentinelWorker(QObject):
 
                 internet_ok = False
                 if not router_ok:
-                     internet_ok = False
+                    # Cascading Logic: If Router is down, Internet is unreachable (but not necessarily down)
+                    # We treat it as "False" for the GUI, but incident logic handles the alert.
+                    internet_ok = False
                 else:
                     if not internet_raw_ok:
                         if not self._verify_component(internet_ip, "INTERNET"): internet_ok = True
                     else:
                         internet_ok = True
 
-                # 4. Incident Logic
+                # --- STEP 2: CLIENT SCAN (With Freeze Logic) ---
+                if router_ok:
+                    # Safe to scan PCs
+                    online_clients = NetworkTools.scan_hosts(self.pc_list)
+                    self.current_client_count = len(online_clients)
+
+                    # Update GUI Grid
+                    gui_client_data = []
+                    for i, ip in enumerate(self.pc_list):
+                        is_alive = ip in online_clients
+                        gui_client_data.append({"name": f"PC-{i + 1}", "ip": ip, "is_alive": is_alive})
+                    self.sig_pc_update.emit(gui_client_data)
+
+                    # Update Session Manager (Occupancy Report)
+                    self.session_manager.process_scan(online_clients, self.pc_list)
+                else:
+                    # Router is DOWN.
+                    # Freeze Logic: Do not scan PCs. Do not update Session Manager.
+                    # This prevents "False Mass Log-offs" in the Occupancy Report.
+                    # We do NOT emit sig_pc_update, so the GUI/Tray simply freezes at last state.
+                    pass
+
+                # --- STEP 3: INCIDENT LOGIC ---
                 self.router_down_start = self._process_component("ROUTER", router_ok, self.router_down_start)
                 self.server_down_start = self._process_component("SERVER", server_ok, self.server_down_start)
 
                 if router_ok:
                     self.isp_down_start = self._process_component("ISP", internet_ok, self.isp_down_start)
 
-                # 5. Update GUI
+                # --- STEP 4: UPDATE INFRA GUI ---
                 self.sig_status_update.emit(timestamp, router_ok, server_ok, internet_ok)
 
-                # 6. Routine Screenshot
+                # --- STEP 5: ROUTINE SCREENSHOT ---
                 self.handle_routine_screenshot()
 
             except Exception as e:

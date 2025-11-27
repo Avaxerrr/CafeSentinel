@@ -1,0 +1,11 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/icons">
+        <file alias="router_ok">assets/icons/router_ok.svg</file>
+        <file alias="router_bad">assets/icons/router_bad.svg</file>
+        <file alias="server_ok">assets/icons/server_ok.svg</file>
+        <file alias="server_bad">assets/icons/server_bad.svg</file>
+        <file alias="net_ok">assets/icons/net_ok.svg</file>
+        <file alias="net_bad">assets/icons/net_bad.svg</file>
+    </qresource>
+</RCC>
