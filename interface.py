@@ -49,13 +49,10 @@ def main():
     if not check_and_create_vault():
         sys.exit(1)
 
-    # 4. Startup Registration - REMOVED
-    # We now use an external install_monitor.bat script to register the task.
-
-    # 5. Launch the System Tray Controller
+    # 4. Launch the System Tray Controller
     controller = SystemTrayController(app)
 
-    # 6. Run the application
+    # 5. Run the application
     sys.exit(app.exec())
 
 
