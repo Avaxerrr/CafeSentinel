@@ -16,21 +16,19 @@
 
     "targets": {
         "router": "192.168.254.254",
-        "server": "192.168.254.102",
+        "server": "192.168.254.100",
         "internet": "8.8.8.8"
     },
 
     "verification_settings": {
-    "enabled": true,
     "retry_delay_seconds": 1.0,
-    "primary_target": "8.8.8.8",
     "secondary_target": "1.1.1.1"
     },
 
     "monitor_settings": {
         "interval_seconds": 2,
         "pc_subnet": "192.168.254",
-        "pc_start_range": 110,
+        "pc_start_range": 201,
         "pc_count": 19
     },
 

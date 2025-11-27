@@ -47,7 +47,7 @@ class SystemTrayController(QObject):
                 "icon_ok": QIcon(":/icons/net_ok"),
                 "icon_bad": QIcon(":/icons/net_bad")
             },
-            # NEW: Client Counter
+            # Client Counter
             "clients": {
                 "obj": QSystemTrayIcon(),
                 "name": "Active Clients",
@@ -107,7 +107,7 @@ class SystemTrayController(QObject):
         update_single("server", server_ok)
         update_single("internet", internet_ok)
 
-    # --- NEW: CLIENT COUNT UPDATER ---
+    # --- CLIENT COUNT UPDATER ---
     def update_client_count(self, pc_data_list):
         """
         Receives list of dicts: [{'name': 'PC-1', 'is_alive': True}, ...]

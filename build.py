@@ -1,7 +1,7 @@
 """
 CafeSentinel Build Script - Separate Folders Approach
 Builds two independent executables in their own folders.
-Includes Stealth VBS Launcher.
+Includes Stealth VBS Launcher and Automatic Resource Compilation.
 """
 import subprocess
 import sys
@@ -16,7 +16,7 @@ class SeparateFoldersBuilder:
         self.dist_folder = self.project_root / "dist"
 
     def clean_previous_builds(self):
-        """Remove previous build artifacts."""
+        """Remove previous build artifacts and compiled resources."""
         print("🧹 Cleaning previous builds...")
 
         if self.dist_folder.exists():
@@ -30,7 +30,39 @@ class SeparateFoldersBuilder:
                     shutil.rmtree(folder)
                     print(f"   Removed: {folder.name}")
 
+        # Clean compiled resources to force regeneration
+        rcc_file = self.project_root / "resources_rc.py"
+        if rcc_file.exists():
+            rcc_file.unlink()
+            print(f"   Removed: {rcc_file.name}")
+
         print("✅ Cleanup complete.\n")
+
+    def compile_resources(self):
+        """Compiles the .qrc file into a Python module using pyside6-rcc."""
+        print("=" * 60)
+        print("🎨 Compiling Resources (Icons)")
+        print("=" * 60)
+
+        qrc_file = self.project_root / "resources.qrc"
+        py_file = self.project_root / "resources_rc.py"
+
+        if not qrc_file.exists():
+            print(f"⚠️ Warning: {qrc_file.name} not found. Skipping resource compilation.")
+            # We return True to allow build to proceed, but app might fail if it imports it
+            return True
+
+        # Command: pyside6-rcc resources.qrc -o resources_rc.py
+        # using shell=True to ensure Windows finds the command in PATH
+        cmd = f"pyside6-rcc \"{qrc_file}\" -o \"{py_file}\""
+
+        try:
+            subprocess.run(cmd, check=True, shell=True)
+            print(f"✅ Compiled: {qrc_file.name} -> {py_file.name}\n")
+            return True
+        except subprocess.CalledProcessError:
+            print(f"❌ Failed to compile resources. Make sure 'pyside6-rcc' is in your PATH.\n")
+            return False
 
     def build_main_app(self):
         """Build CafeSentinel.exe."""
@@ -81,7 +113,7 @@ class SeparateFoldersBuilder:
             "--windows-uac-admin",
             "--assume-yes-for-downloads",
             "--output-dir=build_temp",
-            "--windows-console-mode=disable", # Hide console for final build
+            "--windows-console-mode=disable",
             "watchdog_service.py"
         ]
 
@@ -120,7 +152,7 @@ class SeparateFoldersBuilder:
             if (self.project_root / "icon.svg").exists():
                 shutil.copy2(self.project_root / "icon.svg", main_dest / "icon.svg")
 
-            # --- NEW: Copy the Installer Script ---
+            # Copy Installer Script
             if (self.project_root / "install_monitor.bat").exists():
                 shutil.copy2(self.project_root / "install_monitor.bat", main_dest / "install_monitor.bat")
                 print("   ✓ Included install_monitor.bat")
@@ -151,8 +183,6 @@ class SeparateFoldersBuilder:
         """Create the Stealth VBS Launcher."""
         launcher_path = deploy_root / "START_SENTINEL.vbs"
 
-        # VBScript to launch executable silently (0 = Hide Window)
-        # We use relative paths so it works anywhere
         launcher_content = """Set WshShell = CreateObject("WScript.Shell")
 strScriptDir = CreateObject("Scripting.FileSystemObject").GetParentFolderName(WScript.ScriptFullName)
 strExePath = strScriptDir & "\\SentinelService\\SentinelService.exe"
@@ -171,6 +201,11 @@ Set WshShell = Nothing
 
         self.clean_previous_builds()
 
+        # STEP 1: Compile Resources
+        if not self.compile_resources():
+            return False
+
+        # STEP 2: Build Apps
         if not self.build_main_app():
             return False
 

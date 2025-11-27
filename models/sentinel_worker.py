@@ -10,12 +10,10 @@ from models.discord_notifier import DiscordNotifier
 from models.screen_capture import ScreenCapture
 from models.app_logger import AppLogger
 from models.session_manager import SessionManager
-
+from models.config_manager import ConfigManager  # NEW IMPORT
 
 class SentinelWorker(QObject):
-    # Signal signature: timestamp, router_ok, server_ok, internet_ok
     sig_status_update = Signal(str, bool, bool, bool)
-    # Signal signature: List of dicts [{'name': 'PC-1', 'ip': '...', 'is_alive': True}]
     sig_pc_update = Signal(list)
 
     def __init__(self, config_path="config.json"):
@@ -25,95 +23,91 @@ class SentinelWorker(QObject):
 
         AppLogger.log("SYS_INIT: Kernel thread attached (Hot-Reload Active).")
 
-        self.config_path_rel = config_path
-        self.config_abs_path = None  # Set in load_config
+        # 1. Ensure Config Exists (Self-Healing)
+        self.config_abs_path = ConfigManager.ensure_config_exists(config_path)
         self.last_cfg_mtime = 0
 
-        self.config = self.load_config(config_path)
+        # 2. Load Initial Config
+        self.config = self._load_config_safe()
+
+        # 3. Init Variables
         self.pc_list = self.generate_pc_list()
+        self.current_client_count = 0
 
         # Incidents
         self.router_down_start = None
         self.server_down_start = None
         self.isp_down_start = None
 
-        self.current_client_count = 0
-
+        # Submodules
         self.notifier = DiscordNotifier(self.config)
         self.camera = ScreenCapture(self.config)
         self.session_manager = SessionManager(self.config, self.notifier)
 
-        # Routine Screenshot
+        # Settings
         self.last_screenshot_time = datetime.now()
-        self.screenshot_interval = self.config.get('screenshot_settings', {}).get('interval_minutes', 60)
+        self._update_settings()
 
-        # Verification Settings
-        self._update_verification_settings()
-
-    def load_config(self, config_path):
-        try:
-            from utils.resource_manager import ResourceManager
-            # Get absolute path once and store it
-            if not self.config_abs_path:
-                self.config_abs_path = ResourceManager.get_resource_path(config_path)
-
-            if os.path.exists(self.config_abs_path):
-                self.last_cfg_mtime = os.path.getmtime(self.config_abs_path)
-                with open(self.config_abs_path, 'r') as f:
-                    return json.load(f)
-            return {}
-        except Exception as e:
-            AppLogger.log(f"CFG_ERROR: {e}")
-            return {}
+    def _load_config_safe(self):
+        """Wrapper for ConfigManager loader that handles mtime updates."""
+        if os.path.exists(self.config_abs_path):
+            self.last_cfg_mtime = os.path.getmtime(self.config_abs_path)
+            return ConfigManager.load_config(self.config_abs_path)
+        return {}
 
     def check_hot_reload(self):
-        """Checks if config file has changed and reloads it safely."""
-        try:
-            if not self.config_abs_path or not os.path.exists(self.config_abs_path):
-                return
+        """Checks if config file has changed and reloads it."""
+        if not os.path.exists(self.config_abs_path):
+            # If file was deleted while running, recreate it!
+            ConfigManager.ensure_config_exists()
+            return
 
-            current_mtime = os.path.getmtime(self.config_abs_path)
-            if current_mtime > self.last_cfg_mtime:
-                AppLogger.log("CFG_WATCH: Change detected. Reloading...")
+        current_mtime = os.path.getmtime(self.config_abs_path)
+        if current_mtime > self.last_cfg_mtime:
+            AppLogger.log("CFG_WATCH: Change detected. Reloading...")
 
-                # Safe Load
-                with open(self.config_abs_path, 'r') as f:
-                    new_config = json.load(f)
+            new_config = ConfigManager.load_config(self.config_abs_path)
 
-                # If we get here, JSON is valid. Update everything.
+            if new_config:  # Only update if valid JSON
                 self.config = new_config
                 self.last_cfg_mtime = current_mtime
 
-                # 1. Update Sub-Modules
+                # Update Modules
                 self.notifier.update_config(self.config)
                 self.session_manager.update_config(self.config)
-                self.camera = ScreenCapture(self.config)  # Re-init camera with new settings
+                self.camera = ScreenCapture(self.config)
 
-                # 2. Update Locals
-                self.screenshot_interval = self.config.get('screenshot_settings', {}).get('interval_minutes', 60)
-                self._update_verification_settings()
-
-                # 3. Update PC List (In case range changed)
+                # Update Locals
+                self._update_settings()
                 self.pc_list = self.generate_pc_list()
 
                 AppLogger.log("CFG_WATCH: Hot Reload Complete.")
 
-        except json.JSONDecodeError:
-            AppLogger.log("CFG_WATCH: ⚠️ JSON Syntax Error. Keep using old config.")
-        except Exception as e:
-            AppLogger.log(f"CFG_WATCH: Update Failed: {e}")
+    def _update_settings(self):
+        """Central place to update local vars from config."""
+        # Screenshot
+        self.screenshot_interval = self.config.get('screenshot_settings', {}).get('interval_minutes', 60)
 
-    def _update_verification_settings(self):
-        self.verify_cfg = self.config.get('verification_settings', {})
-        self.retry_delay = self.verify_cfg.get('retry_delay_seconds', 1.0)
-        self.secondary_dns = self.verify_cfg.get('secondary_target', '1.1.1.1')
+        # Verification
+        verify = self.config.get('verification_settings', {})
+        self.retry_delay = verify.get('retry_delay_seconds', 1.0)
+        self.secondary_dns = verify.get('secondary_target', '1.1.1.1')
+
+        # Targets (Just log them for debug)
+        targets = self.config.get('targets', {})
+        self.target_router = targets.get('router')
+        self.target_server = targets.get('server')
+        self.target_internet = targets.get('internet')
 
     def generate_pc_list(self):
         settings = self.config.get('monitor_settings', {})
+        # Use .get() without fallbacks where possible, or safe logic
         subnet = settings.get('pc_subnet', '192.168.1')
         start = settings.get('pc_start_range', 110)
         count = settings.get('pc_count', 20)
         return [f"{subnet}.{start + i}" for i in range(count)]
+
+    # --- MISSING FUNCTIONS RESTORED BELOW ---
 
     def handle_routine_screenshot(self):
         if self.privacy_mode:
@@ -168,100 +162,84 @@ class SentinelWorker(QObject):
             return None
         return down_start_time
 
+    # --- MAIN LOOP ---
+
     def start_monitoring(self):
         AppLogger.log("DAEMON: Monitoring Active")
-
-        targets = self.config.get('targets', {})
-        monitor_settings = self.config.get('monitor_settings', {})
-        interval = monitor_settings.get('interval_seconds', 2)
-
-        router_ip = targets.get('router', '192.168.1.1')
-        server_ip = targets.get('server', '192.168.1.200')
-        internet_ip = targets.get('internet', '8.8.8.8')
 
         while self.running:
             loop_start = time.time()
             timestamp = datetime.now().strftime("%H:%M:%S")
 
             try:
-                # 0. Check for Config Changes
+                # 0. Hot Reload
                 self.check_hot_reload()
 
-                # --- REORDERED: STEP 1 INFRASTRUCTURE SCAN ---
-                # We must check Infrastructure FIRST to decide if we can trust the PC scan.
-
-                # RE-READ targets in case config changed
+                # 1. Get Targets (Clean, no hardcoding)
                 targets = self.config.get('targets', {})
-                router_ip = targets.get('router', '192.168.1.1')
-                server_ip = targets.get('server', '192.168.1.200')
-                internet_ip = targets.get('internet', '8.8.8.8')
+                router_ip = targets.get('router')
+                server_ip = targets.get('server')
+                internet_ip = targets.get('internet')
 
+                # SAFETY CHECK: If IPs are missing from config, skip scan
+                if not router_ip or not server_ip or not internet_ip:
+                    AppLogger.log("WARN: Targets missing in config. Check JSON.")
+                    time.sleep(5)
+                    continue
+
+                # 2. Infrastructure Scan
                 infra_status = NetworkTools.scan_hosts([router_ip, server_ip, internet_ip])
-
                 router_ok = router_ip in infra_status
                 server_ok = server_ip in infra_status
                 internet_raw_ok = internet_ip in infra_status
 
-                # --- VERIFICATION LOGIC (Moved Up) ---
+                # 3. Verification
                 if not router_ok:
                     if not self._verify_component(router_ip, "ROUTER"): router_ok = True
-
                 if not server_ok:
                     if not self._verify_component(server_ip, "SERVER"): server_ok = True
 
                 internet_ok = False
                 if not router_ok:
-                    # Cascading Logic: If Router is down, Internet is unreachable (but not necessarily down)
-                    # We treat it as "False" for the GUI, but incident logic handles the alert.
-                    internet_ok = False
+                    internet_ok = False  # Cascade
                 else:
                     if not internet_raw_ok:
                         if not self._verify_component(internet_ip, "INTERNET"): internet_ok = True
                     else:
                         internet_ok = True
 
-                # --- STEP 2: CLIENT SCAN (With Freeze Logic) ---
+                # 4. Client Scan (With Freeze Logic)
                 if router_ok:
-                    # Safe to scan PCs
                     online_clients = NetworkTools.scan_hosts(self.pc_list)
                     self.current_client_count = len(online_clients)
 
-                    # Update GUI Grid
                     gui_client_data = []
                     for i, ip in enumerate(self.pc_list):
                         is_alive = ip in online_clients
                         gui_client_data.append({"name": f"PC-{i + 1}", "ip": ip, "is_alive": is_alive})
                     self.sig_pc_update.emit(gui_client_data)
 
-                    # Update Session Manager (Occupancy Report)
                     self.session_manager.process_scan(online_clients, self.pc_list)
                 else:
-                    # Router is DOWN.
-                    # Freeze Logic: Do not scan PCs. Do not update Session Manager.
-                    # This prevents "False Mass Log-offs" in the Occupancy Report.
-                    # We do NOT emit sig_pc_update, so the GUI/Tray simply freezes at last state.
+                    # Router Down = Freeze Client State
                     pass
 
-                # --- STEP 3: INCIDENT LOGIC ---
+                # 5. Incident Logic
                 self.router_down_start = self._process_component("ROUTER", router_ok, self.router_down_start)
                 self.server_down_start = self._process_component("SERVER", server_ok, self.server_down_start)
-
                 if router_ok:
                     self.isp_down_start = self._process_component("ISP", internet_ok, self.isp_down_start)
 
-                # --- STEP 4: UPDATE INFRA GUI ---
+                # 6. Update GUI
                 self.sig_status_update.emit(timestamp, router_ok, server_ok, internet_ok)
 
-                # --- STEP 5: ROUTINE SCREENSHOT ---
+                # 7. Routine Task
                 self.handle_routine_screenshot()
 
             except Exception as e:
                 AppLogger.log(f"EXCEPT: {e}")
 
             elapsed = time.time() - loop_start
-            # Update interval dynamically too
-            monitor_settings = self.config.get('monitor_settings', {})
-            interval = monitor_settings.get('interval_seconds', 2)
-
+            interval = self.config.get('monitor_settings', {}).get('interval_seconds', 2)
             sleep_time = max(0.1, interval - elapsed)
             time.sleep(sleep_time)
