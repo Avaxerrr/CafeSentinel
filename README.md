@@ -5,6 +5,9 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 ![Status](https://img.shields.io/badge/status-stable-green)
 
+<img width="696" height="677" alt="image" src="https://github.com/user-attachments/assets/236d6e67-d3c5-42be-a52f-a7ed97677903" />
+
+
 # CafeSentinel
 
 </div>
