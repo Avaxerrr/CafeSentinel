@@ -1,0 +1,38 @@
+{
+    "discord_settings": {
+        "enabled": true,
+        "shop_name": "Respawn Gaming",
+        "webhook_alerts": "https://discord.com/api/webhooks/1442778718752870600/alZpLRIMg4Rhs1ZcMA33Izt2UvgJAQpUibXi-vBsJu0Tuwv_iqPhfWreP0341EwUoAXG",
+        "webhook_occupancy": "https://discord.com/api/webhooks/1442778718752870600/alZpLRIMg4Rhs1ZcMA33Izt2UvgJAQpUibXi-vBsJu0Tuwv_iqPhfWreP0341EwUoAXG",
+        "webhook_screenshots": "https://discord.com/api/webhooks/1442778718752870600/alZpLRIMg4Rhs1ZcMA33Izt2UvgJAQpUibXi-vBsJu0Tuwv_iqPhfWreP0341EwUoAXG"
+    },
+    "screenshot_settings": {
+        "enabled": true,
+        "interval_minutes": 1440,
+        "quality": 80,
+        "resize_ratio": 1.0
+    },
+    "targets": {
+        "router": "192.168.254.254",
+        "server": "192.168.254.100",
+        "internet": "8.8.8.8"
+    },
+    "verification_settings": {
+        "retry_delay_seconds": 1.0,
+        "secondary_target": "1.1.1.1",
+        "min_incident_duration_seconds": 10
+    },
+    "monitor_settings": {
+        "interval_seconds": 2,
+        "pc_subnet": "192.168.1",
+        "pc_start_range": 110,
+        "pc_count": 20
+    },
+    "occupancy_settings": {
+        "enabled": true,
+        "mode": "session",
+        "min_session_minutes": 3,
+        "batch_delay_seconds": 30,
+        "hourly_snapshot_enabled": true
+    }
+}

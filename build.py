@@ -90,6 +90,8 @@ class NestedBuilder:
             "--windows-uac-admin",
             "--assume-yes-for-downloads",
             "--output-dir=build_temp",
+            "--include-module=flask",
+            "--include-module=flask_cors",
             "interface.py"
         ]
 

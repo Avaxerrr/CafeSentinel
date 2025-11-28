@@ -1,14 +1,17 @@
 import sys
 import os
 import subprocess
+from threading import Thread
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
 from PySide6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor, QFont, QBrush
 from PySide6.QtCore import QObject, Qt, QRect, QTimer
 
 import resources_rc
+import api_server
 from views.main_window import MainWindow
 from models.sentinel_worker import SentinelWorker
 from models.app_logger import AppLogger
+
 
 
 # --- HELPER FUNCTIONS FOR WATCHDOG ---
@@ -119,6 +122,9 @@ class SystemTrayController(QObject):
         self.worker_thread.started.connect(self.worker.start_monitoring)
         self.worker_thread.start()
 
+        # 7.5. Start Remote Config API
+        self.start_api_server()
+
         # 8. Watchdog Heartbeat (Mutual Monitoring)
         self.watchdog_timer = QTimer(self)
         self.watchdog_timer.setInterval(5000)  # Check every 5 seconds
@@ -131,6 +137,20 @@ class SystemTrayController(QObject):
     def check_watchdog_status(self):
         """Periodic heartbeat to ensure watchdog is alive."""
         ensure_watchdog_running()
+
+    def start_api_server(self):
+        """Start Flask API server for remote configuration."""
+        try:
+            api_thread = Thread(
+                target=api_server.run_api_server,
+                args=('0.0.0.0', 5000),
+                daemon=True  # Dies when main app exits
+            )
+            api_thread.start()
+            AppLogger.log("✅ Remote Config API started on port 5000")
+        except Exception as e:
+            AppLogger.log(f"⚠️ API server failed to start: {e}")
+            AppLogger.log("⚠️ App will continue without remote config capability")
 
     def setup_menu(self):
         self.action_open = QAction("Open Monitor", self.menu)
