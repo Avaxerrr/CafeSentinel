@@ -1,14 +1,71 @@
 import sys
+import os
+import subprocess
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
 from PySide6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor, QFont, QBrush
-from PySide6.QtCore import QObject, Qt, QRect
+from PySide6.QtCore import QObject, Qt, QRect, QTimer
 
-# Ensure this matches your file name for the compiled resources
 import resources_rc
-
 from views.main_window import MainWindow
 from models.sentinel_worker import SentinelWorker
+from models.app_logger import AppLogger
 
+
+# --- HELPER FUNCTIONS FOR WATCHDOG ---
+def is_compiled():
+    """Check if running as compiled EXE (Nuitka or PyInstaller)."""
+    if getattr(sys, 'frozen', False):  # PyInstaller
+        return True
+    try:
+        from __main__ import __compiled__  # Nuitka
+        return True
+    except ImportError:
+        return False
+
+
+def process_exists(process_name):
+    """Check if a process is running using tasklist."""
+    try:
+        cmd = f'tasklist /FI "IMAGENAME eq {process_name}" /NH'
+        output = subprocess.check_output(cmd, shell=True, creationflags=0x08000000).decode()
+        return process_name.lower() in output.lower()
+    except Exception as e:
+        AppLogger.log(f"ERROR: process_exists check failed for {process_name}: {e}")
+        return False
+
+
+def ensure_watchdog_running():
+    """Checks if SentinelService is running, if not, launches it."""
+
+    # Skip in script/dev mode
+    if not is_compiled():
+        return
+
+    watchdog_name = "SentinelService.exe"
+
+    # Already running? All good.
+    if process_exists(watchdog_name):
+        return
+
+    # Not running - attempt revival
+    AppLogger.log(f"WATCHDOG: {watchdog_name} not found. Attempting to revive...")
+
+    base_dir = os.path.dirname(sys.executable)
+    watchdog_path = os.path.join(base_dir, "SentinelService", watchdog_name)
+
+    if not os.path.exists(watchdog_path):
+        AppLogger.log(f"WATCHDOG ERROR: File not found at: {watchdog_path}")
+        return
+
+    try:
+        AppLogger.log(f"WATCHDOG: Launching {watchdog_path}...")
+        subprocess.Popen([watchdog_path], close_fds=True, creationflags=0x00000008)
+        AppLogger.log("WATCHDOG: Launch command sent successfully.")
+    except Exception as e:
+        AppLogger.log(f"WATCHDOG FATAL: Failed to launch service: {e}")
+
+
+# -------------------------------------
 
 class SystemTrayController(QObject):
     def __init__(self, app):
@@ -19,82 +76,71 @@ class SystemTrayController(QObject):
         self.worker = SentinelWorker()
         self.main_window = MainWindow()
 
-        # 2. Connect Worker Signals to Main Window (GUI)
+        # 2. Connect Worker Signals
         self.worker.sig_status_update.connect(self.main_window.update_infrastructure)
         self.worker.sig_pc_update.connect(self.main_window.update_pc_grid)
 
-        # 3. Create the Shared Context Menu
+        # 3. Menu
         self.menu = QMenu()
         self.setup_menu()
 
-        # 4. Define the 4 Tray Icons
+        # 4. Tray Icons
         self.trays = {
-            "router": {
-                "obj": QSystemTrayIcon(),
-                "name": "Router",
-                "icon_ok": QIcon(":/icons/router_ok"),
-                "icon_bad": QIcon(":/icons/router_bad")
-            },
-            "server": {
-                "obj": QSystemTrayIcon(),
-                "name": "Server",
-                "icon_ok": QIcon(":/icons/server_ok"),
-                "icon_bad": QIcon(":/icons/server_bad")
-            },
-            "internet": {
-                "obj": QSystemTrayIcon(),
-                "name": "Internet",
-                "icon_ok": QIcon(":/icons/net_ok"),
-                "icon_bad": QIcon(":/icons/net_bad")
-            },
-            # Client Counter
-            "clients": {
-                "obj": QSystemTrayIcon(),
-                "name": "Active Clients",
-                "icon_ok": None,  # Generated dynamically
-                "icon_bad": None
-            }
+            "router": {"obj": QSystemTrayIcon(), "name": "Router", "icon_ok": QIcon(":/icons/router_ok"),
+                       "icon_bad": QIcon(":/icons/router_bad")},
+            "server": {"obj": QSystemTrayIcon(), "name": "Server", "icon_ok": QIcon(":/icons/server_ok"),
+                       "icon_bad": QIcon(":/icons/server_bad")},
+            "internet": {"obj": QSystemTrayIcon(), "name": "Internet", "icon_ok": QIcon(":/icons/net_ok"),
+                         "icon_bad": QIcon(":/icons/net_bad")},
+            "clients": {"obj": QSystemTrayIcon(), "name": "Active Clients", "icon_ok": None, "icon_bad": None}
         }
 
-        # 5. Initialize Icons
+        # 5. Init Icons
         for key, data in self.trays.items():
             tray = data["obj"]
             tray.setContextMenu(self.menu)
-
-            # Special handling for the Client counter (Start at 0)
             if key == "clients":
                 tray.setIcon(self.generate_number_icon(0))
                 tray.setToolTip("Active Clients: 0")
             else:
                 tray.setIcon(data["icon_ok"])
                 tray.setToolTip(f"{data['name']}: Initializing...")
-
             tray.show()
             tray.activated.connect(self.on_tray_icon_activated)
 
-        # 6. Connect Worker Signals to Tray Logic
+        # 6. Worker Signals
         self.worker.sig_status_update.connect(self.update_infrastructure_icons)
-        self.worker.sig_pc_update.connect(self.update_client_count)  # NEW SIGNAL
+        self.worker.sig_pc_update.connect(self.update_client_count)
 
-        # 7. Start the Worker Thread
+        # 7. Thread
         from PySide6.QtCore import QThread
         self.worker_thread = QThread()
         self.worker.moveToThread(self.worker_thread)
         self.worker_thread.started.connect(self.worker.start_monitoring)
         self.worker_thread.start()
 
+        # 8. Watchdog Heartbeat (Mutual Monitoring)
+        self.watchdog_timer = QTimer(self)
+        self.watchdog_timer.setInterval(5000)  # Check every 5 seconds
+        self.watchdog_timer.timeout.connect(self.check_watchdog_status)
+        self.watchdog_timer.start()
+
+        # Initial check (don't wait 5s)
+        self.check_watchdog_status()
+
+    def check_watchdog_status(self):
+        """Periodic heartbeat to ensure watchdog is alive."""
+        ensure_watchdog_running()
+
     def setup_menu(self):
         self.action_open = QAction("Open Monitor", self.menu)
         self.action_open.triggered.connect(self.show_window)
         self.menu.addAction(self.action_open)
-
         self.menu.addSeparator()
-
         self.action_quit = QAction("Exit Sentinel", self.menu)
         self.action_quit.triggered.connect(self.verify_quit)
         self.menu.addAction(self.action_quit)
 
-    # --- INFRASTRUCTURE UPDATER ---
     def update_infrastructure_icons(self, timestamp, router_ok, server_ok, internet_ok):
         def update_single(key, is_online):
             data = self.trays[key]
@@ -107,63 +153,35 @@ class SystemTrayController(QObject):
         update_single("server", server_ok)
         update_single("internet", internet_ok)
 
-    # --- CLIENT COUNT UPDATER ---
     def update_client_count(self, pc_data_list):
-        """
-        Receives list of dicts: [{'name': 'PC-1', 'is_alive': True}, ...]
-        Calculates count and draws the number icon.
-        """
-        # 1. Calculate Count
         online_count = sum(1 for pc in pc_data_list if pc['is_alive'])
         total_count = len(pc_data_list)
-
-        # 2. Generate Icon
         icon = self.generate_number_icon(online_count)
-
-        # 3. Update Tray
         tray = self.trays["clients"]["obj"]
         tray.setIcon(icon)
         tray.setToolTip(f"Active Clients: {online_count} / {total_count}")
 
     def generate_number_icon(self, number):
-        """
-        Draws a dark rounded box with the white number inside.
-        """
-        # Create a blank transparent image (64x64 is good for high DPI)
         size = 64
         pixmap = QPixmap(size, size)
         pixmap.fill(Qt.transparent)
-
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
-
-        # 1. Draw Background (Dark Grey Rounded Rect)
-        # This ensures visibility on both Light and Dark Windows themes
         bg_color = QColor("#333333")
         painter.setBrush(QBrush(bg_color))
         painter.setPen(Qt.NoPen)
-
-        # Draw a box that fills most of the icon
         rect = QRect(0, 0, size, size)
-        painter.drawRoundedRect(rect, 15, 15)  # 15 is corner radius
-
-        # 2. Draw Text (White Number)
+        painter.drawRoundedRect(rect, 15, 15)
         text_color = QColor("white")
         painter.setPen(text_color)
-
-        # Dynamic font size based on digits
         font_size = 32 if number < 100 else 24
         font = QFont("Segoe UI", font_size)
         font.setBold(True)
         painter.setFont(font)
-
-        # Align text in the center
         painter.drawText(rect, Qt.AlignCenter, str(number))
-
         painter.end()
         return QIcon(pixmap)
 
-    # --- UTILS ---
     def on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
             self.show_window()
@@ -177,13 +195,11 @@ class SystemTrayController(QObject):
         from PySide6.QtWidgets import QInputDialog, QMessageBox, QLineEdit
         from models.security_manager import SecurityManager
 
-        password, ok = QInputDialog.getText(
-            None, "Security Check", "Enter Admin Password to Exit:",
-            QLineEdit.Password
-        )
-
+        password, ok = QInputDialog.getText(None, "Security Check", "Enter Admin Password to Exit:",
+                                            QLineEdit.Password)
         if ok and password:
             if SecurityManager.verify_admin(password):
+                AppLogger.log("SYS: User requested shutdown with valid password.")
                 self.worker.running = False
                 self.worker_thread.quit()
                 self.worker_thread.wait()

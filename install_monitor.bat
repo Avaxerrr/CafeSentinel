@@ -1,6 +1,7 @@
 @echo off
 :: CafeSentinel - One-Time Setup Script
-:: Registers the application in Task Scheduler to run as ADMIN at logon.
+:: Registers the WATCHDOG (SentinelService) in Task Scheduler.
+:: This ensures the monitoring service starts at logon, which then launches the GUI.
 :: Run this file as Administrator!
 
 echo ==================================================
@@ -18,12 +19,14 @@ if %errorLevel% == 0 (
 )
 
 :: Define Paths
-:: Assumes this .bat file is in the same folder as CafeSentinel.exe
-set "EXE_PATH=%~dp0CafeSentinel.exe"
+:: This .bat file is in the CafeSentinel folder.
+:: We want to launch: %~dp0SentinelService\SentinelService.exe
+
+set "EXE_PATH=%~dp0SentinelService\SentinelService.exe"
 set "TASK_NAME=CafeSentinelMonitor"
 
 if not exist "%EXE_PATH%" (
-    echo [ERROR] Could not find CafeSentinel.exe in this folder!
+    echo [ERROR] Could not find SentinelService.exe!
     echo Expected: %EXE_PATH%
     pause
     exit
@@ -43,7 +46,7 @@ schtasks /create /tn "%TASK_NAME%" /tr "'%EXE_PATH%'" /sc ONLOGON /rl HIGHEST /f
 if %errorLevel% == 0 (
     echo.
     echo [SUCCESS] Installation Complete!
-    echo The monitor will now start automatically when you log in.
+    echo The Watchdog Service will now start automatically when you log in.
     echo You can delete this script if you want.
 ) else (
     echo.

@@ -1,4 +1,13 @@
 CafeSentinel/
++--- assets
+|    \--- icons
+|         +--- net_bad.svg
+|         +--- net_ok.svg
+|         +--- router_bad.svg
+|         +--- router_ok.svg
+|         +--- server_bad.svg
+|         \--- server_ok.svg
+|    
 +--- controllers
 |    +--- __init__.py
 |    \--- system_tray_app.py
@@ -6,6 +15,7 @@ CafeSentinel/
 +--- models
 |    +--- __init__.py
 |    +--- app_logger.py
+|    +--- config_manager.py
 |    +--- discord_notifier.py
 |    +--- event_logger.py
 |    +--- network_tools.py
@@ -14,7 +24,6 @@ CafeSentinel/
 |    +--- sentinel_worker.py
 |    +--- session_manager.py
 |    \--- startup_manager.py
-|
 |    
 +--- utils
 |    +--- __init__.py
@@ -32,4 +41,7 @@ CafeSentinel/
 +--- icon.png
 +--- icon.svg
 +--- interface.py
++--- README.md
++--- resources.qrc
++--- resources_rc.py
 \--- watchdog_service.py

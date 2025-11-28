@@ -21,7 +21,8 @@ class ConfigManager:
         },
         "verification_settings": {
             "retry_delay_seconds": 1.0,
-            "secondary_target": "1.1.1.1"
+            "secondary_target": "1.1.1.1",
+            "min_incident_duration_seconds": 10
         },
         "screenshot_settings": {
             "enabled": True,

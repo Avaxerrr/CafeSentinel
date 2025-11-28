@@ -1,5 +1,5 @@
 """
-CafeSentinel Watchdog Service - DEBUG VERSION
+CafeSentinel Watchdog Service
 """
 import subprocess
 import sys
@@ -8,33 +8,8 @@ import os
 import ctypes
 
 # ==============================================================================
-# --- DIAGNOSTIC BLOCK ---
-# This will run at the very start to see what's happening inside the EXE
+# --- CONFIG ---
 # ==============================================================================
-print("="*60)
-print("--- WATCHDOG DIAGNOSTIC START ---")
-print(f"sys.executable: {sys.executable}")
-print(f"os.path.abspath(sys.executable): {os.path.abspath(sys.executable)}")
-
-# Check for sys.frozen (PyInstaller)
-has_frozen = getattr(sys, 'frozen', False)
-print(f"getattr(sys, 'frozen', False): {has_frozen}")
-
-# Check for __compiled__ (Nuitka)
-try:
-    # Nuitka creates this object
-    from __main__ import __compiled__
-    has_compiled = True
-    print(f"__main__.__compiled__ exists: True")
-except ImportError:
-    has_compiled = False
-    print(f"__main__.__compiled__ exists: False")
-
-print("--- WATCHDOG DIAGNOSTIC END ---")
-print("="*60)
-# ==============================================================================
-
-
 TARGET_SCRIPT = "interface.py"
 TARGET_EXE = "CafeSentinel.exe"
 
@@ -48,45 +23,47 @@ def is_admin():
 
 
 def is_compiled():
-    """
-    Robust check to see if we're running as a compiled executable.
-    """
+    """Robust check to see if we're running as a compiled executable."""
+    has_frozen = getattr(sys, 'frozen', False)
+    try:
+        from __main__ import __compiled__
+        has_compiled = True
+    except ImportError:
+        has_compiled = False
     return has_frozen or has_compiled
 
 
 def get_target_path():
     """Get the path to CafeSentinel.exe."""
     if is_compiled():
-        # Running as compiled EXE
-        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
-        deploy_root = os.path.dirname(exe_dir)
-        target_dir = os.path.join(deploy_root, "CafeSentinel")
-        target_path = os.path.join(target_dir, TARGET_EXE)
-
-        print(f"📍 Running in EXE mode")
-        print(f"🎯 Target Path: {target_path}")
-
-        if not os.path.exists(target_path):
-            print(f"\n❌ ERROR: {TARGET_EXE} not found!")
-            print(f"Expected location: {target_path}")
-            input("\nPress Enter to exit...")
-            sys.exit(1)
-
-        return target_path
+        # Running as compiled EXE: .../CafeSentinel/SentinelService/SentinelService.exe
+        # Target: .../CafeSentinel/CafeSentinel.exe
+        exe_path = os.path.abspath(sys.executable)
+        service_dir = os.path.dirname(exe_path)
+        main_app_dir = os.path.dirname(service_dir)
+        target_path = os.path.join(main_app_dir, TARGET_EXE)
     else:
-        # Running as Python script
+        # Script mode
         script_dir = os.path.dirname(os.path.abspath(__file__))
         target_path = os.path.join(script_dir, TARGET_SCRIPT)
 
-        print(f"📍 Running in Script mode")
-        print(f"🎯 Target: {target_path}")
+    if not os.path.exists(target_path):
+        print(f"\n❌ ERROR: Target not found at {target_path}")
+        sys.exit(1)
 
-        if not os.path.exists(target_path):
-            print(f"\n❌ ERROR: {TARGET_SCRIPT} not found!")
-            input("\nPress Enter to exit...")
-            sys.exit(1)
+    return target_path
 
-        return target_path
+
+def process_exists(process_name):
+    """Check if a process is running using tasklist."""
+    try:
+        # /NH = No Header, /FI = Filter
+        cmd = f'tasklist /FI "IMAGENAME eq {process_name}" /NH'
+        output = subprocess.check_output(cmd, shell=True).decode()
+        # If found, output contains the process name. If not, it says "No tasks..."
+        return process_name.lower() in output.lower()
+    except:
+        return False
 
 
 def run_watchdog():
@@ -94,13 +71,43 @@ def run_watchdog():
     target_path = get_target_path()
     target_name = os.path.basename(target_path)
 
+    # For script mode, target name is python.exe usually, so we rely on simple logic
+    # or just assume we only really care about this in EXE mode.
+    if not is_compiled():
+        print("⚠️ Running in script mode - Process detection might be inaccurate.")
+
     print("\n" + "=" * 60)
     print("🛡️  CAFSENTINEL WATCHDOG SERVICE")
     print("=" * 60)
 
     while True:
         try:
-            print(f"[{time.strftime('%H:%M:%S')}] Starting {target_name}...")
+            # 1. Check if ALREADY running (Attach Mode)
+            # Only reliable in EXE mode where name matches CafeSentinel.exe
+            if is_compiled() and process_exists(target_name):
+                print(f"[{time.strftime('%H:%M:%S')}] 📎 Target '{target_name}' is running. Attaching...")
+
+                # Poll until it dies
+                while process_exists(target_name):
+                    time.sleep(3)
+
+                print(f"[{time.strftime('%H:%M:%S')}] ⚠️ Target process disappeared.")
+
+                # NEW CHECK: Setup Cancel / Clean Exit detection
+                # Since we can't get exit code in attach mode, we check for the Vault file.
+                # If no vault exists, assume it was a Setup Cancel -> Do not restart.
+                base_dir = os.path.dirname(target_path)
+                vault_path = os.path.join(base_dir, "cron.dll") # Security Vault
+
+                if not os.path.exists(vault_path):
+                    print(f"[{time.strftime('%H:%M:%S')}] 🛑 No Vault found. Assuming Setup Cancelled. Exiting.")
+                    break
+
+                print("🔄 Restarting...")
+                # Loop continues to spawn logic below
+
+            # 2. Start Process (Spawn Mode)
+            print(f"[{time.strftime('%H:%M:%S')}] 🚀 Starting {target_name}...")
 
             if is_compiled():
                 p = subprocess.Popen([target_path])
@@ -112,6 +119,9 @@ def run_watchdog():
             if exit_code == 0:
                 print(f"\n[{time.strftime('%H:%M:%S')}] ✅ CLEAN EXIT (Code 0)")
                 break
+            elif exit_code == 100:
+                print(f"\n[{time.strftime('%H:%M:%S')}] 🛑 SETUP CANCELLED (Code 100) - Stopping Watchdog.")
+                break
             else:
                 print(f"\n[{time.strftime('%H:%M:%S')}] ⚠️  ABNORMAL EXIT (Code {exit_code})")
                 time.sleep(2)
@@ -122,13 +132,12 @@ def run_watchdog():
 
 
 def main():
-    """Entry point."""
     if not is_admin():
         try:
             ctypes.windll.shell32.ShellExecuteW(
                 None, "runas", sys.executable, " ".join(sys.argv), None, 1
             )
-        except Exception:
+        except:
             pass
         sys.exit(0)
 

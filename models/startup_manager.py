@@ -12,18 +12,15 @@ class StartupManager:
 
     @staticmethod
     def ensure_startup():
-        """
-        Registers startup via TWO methods for redundancy:
-        1. Windows Registry (Run Key)
-        2. Task Scheduler (Highest Privileges)
-        """
         if not getattr(sys, 'frozen', False):
             return  # Skip in dev mode
 
         # Locate the Watchdog Executable
-        base_dir = os.path.dirname(sys.executable)  # Deploy/CafeSentinel
-        deploy_root = os.path.dirname(base_dir)  # Deploy/
-        watchdog_exe = os.path.join(deploy_root, "SentinelService", "SentinelService.exe")
+        # Sys.executable is CafeSentinel.exe in .../CafeSentinel/
+        # Watchdog is in .../CafeSentinel/SentinelService/SentinelService.exe
+
+        base_dir = os.path.dirname(sys.executable)  # .../CafeSentinel
+        watchdog_exe = os.path.join(base_dir, "SentinelService", "SentinelService.exe")
 
         if not os.path.exists(watchdog_exe):
             logging.error(f"❌ Startup Error: Could not find {watchdog_exe}")

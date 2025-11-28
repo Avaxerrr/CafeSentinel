@@ -6,9 +6,11 @@ from controllers.system_tray_app import SystemTrayController
 from models.security_manager import SecurityManager
 from views.setup_wizard import SetupWizard
 
+EXIT_CODE_SETUP_CANCEL = 100
+
 
 def is_admin():
-    # Check if the script has Admin rights.
+    """Check if the script has Admin rights."""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin()
     except:
@@ -16,6 +18,7 @@ def is_admin():
 
 
 def check_and_create_vault():
+    """Checks if security vault exists, if not, runs setup wizard."""
     if SecurityManager.vault_exists():
         return True
 
@@ -47,9 +50,10 @@ def main():
 
     # 3. Check/Create Security Vault
     if not check_and_create_vault():
-        sys.exit(1)
+        sys.exit(EXIT_CODE_SETUP_CANCEL)
 
     # 4. Launch the System Tray Controller
+    # (The controller now handles Watchdog monitoring automatically via QTimer)
     controller = SystemTrayController(app)
 
     # 5. Run the application

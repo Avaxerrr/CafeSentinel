@@ -93,6 +93,9 @@ class SentinelWorker(QObject):
         self.retry_delay = verify.get('retry_delay_seconds', 1.0)
         self.secondary_dns = verify.get('secondary_target', '1.1.1.1')
 
+        # Load minimum duration (default to 0 if missing so behavior doesn't break)
+        self.min_incident_duration = verify.get('min_incident_duration_seconds', 0)
+
         # Targets (Just log them for debug)
         targets = self.config.get('targets', {})
         self.target_router = targets.get('router')
@@ -106,8 +109,6 @@ class SentinelWorker(QObject):
         start = settings.get('pc_start_range', 110)
         count = settings.get('pc_count', 20)
         return [f"{subnet}.{start + i}" for i in range(count)]
-
-    # --- MISSING FUNCTIONS RESTORED BELOW ---
 
     def handle_routine_screenshot(self):
         if self.privacy_mode:
@@ -151,9 +152,19 @@ class SentinelWorker(QObject):
             return now
         elif is_online and down_start_time is not None:
             duration = now - down_start_time
+            duration_seconds = duration.total_seconds()
             duration_str = str(duration).split('.')[0]
+
+            # Hysteresis Check
+            # If the outage was shorter than our threshold, ignore it completely.
+            if duration_seconds < self.min_incident_duration:
+                AppLogger.log(f"IGNORE: {name} glitch detected ({duration_seconds:.1f}s) - Suppressed.")
+                return None
+
+            # If we are here, it's a real incident
             AppLogger.log(f"RECOVERY: {name} Restored | Duration: {duration_str}")
             EventLogger.log_resolution(down_start_time, now, f"{name}_DOWN")
+
             img_data, _ = self.camera.capture_to_memory()
             self.notifier.send_outage_report(
                 duration_str, f"{name}_DOWN", self.current_client_count,
