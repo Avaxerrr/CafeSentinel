@@ -6,10 +6,10 @@ from models.app_logger import AppLogger
 from models.config_manager import ConfigManager
 
 app = Flask(__name__)
-CORS(app)  # Allow cross-origin requests
+CORS(app)
 
-# Initialize Singleton Manager
 cfg_mgr = ConfigManager.instance()
+
 
 # ============= API ENDPOINTS =============
 
@@ -21,6 +21,7 @@ def api_status():
         "service": "CafeSentinel Config API",
         "timestamp": datetime.now().isoformat()
     })
+
 
 @app.route('/api/config', methods=['GET'])
 def get_config():
@@ -37,6 +38,7 @@ def get_config():
             "message": "Failed to read config"
         }), 500
 
+
 @app.route('/api/config', methods=['POST'])
 def update_config():
     """Update configuration"""
@@ -49,9 +51,6 @@ def update_config():
                 "message": "No config data provided"
             }), 400
 
-        # Hand off to Singleton Manager
-        # NOTE: The validation logic (check required keys) is now handled
-        # inside ConfigManager.update_config()
         success, message = cfg_mgr.update_config(new_config)
 
         if success:
@@ -72,11 +71,11 @@ def update_config():
             "message": str(e)
         }), 500
 
+
 @app.route('/api/config/backups', methods=['GET'])
 def list_backups():
     """List available config backups"""
     try:
-        # Helper from ConfigManager
         backups = cfg_mgr.get_backup_list()
         return jsonify({
             "status": "success",
@@ -92,14 +91,11 @@ def list_backups():
 @app.route('/api/logs', methods=['GET'])
 def get_logs():
     """
-    Returns recent logs from memory buffer.
+    Returns TODAY's logs from memory buffer (real-time).
     Query param: ?lines=500 (optional, default 500)
     """
     try:
-        # Get optional line count from query param
         line_count = request.args.get('lines', default=500, type=int)
-
-        # Clamp to reasonable range (prevent abuse)
         line_count = max(10, min(line_count, 1000))
 
         logs = AppLogger.get_recent_logs(line_count)
@@ -115,6 +111,109 @@ def get_logs():
             "message": str(e)
         }), 500
 
+
+@app.route('/api/logs/archive', methods=['GET'])
+def list_archived_logs():
+    """
+    ⭐ NEW: Lists all archived log files in probes/ folder.
+    Returns filenames sorted newest first.
+    """
+    try:
+        archives = AppLogger.get_archive_list()
+        return jsonify({
+            "status": "success",
+            "count": len(archives),
+            "archives": archives
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/logs/archive/<filename>', methods=['GET'])
+def get_archived_log(filename):
+    """
+    ⭐ NEW: Returns the contents of a specific archived log.
+    Example: GET /api/logs/archive/info-2025-11-30.log
+    """
+    try:
+        logs = AppLogger.get_archived_log(filename)
+
+        if logs is None:
+            return jsonify({
+                "status": "error",
+                "message": "Archive file not found"
+            }), 404
+
+        return jsonify({
+            "status": "success",
+            "filename": filename,
+            "lines": len(logs),
+            "logs": logs
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/logs/archive/<filename>', methods=['DELETE'])
+def delete_archived_log(filename):
+    """
+    Permanently deletes an archived log file.
+    No recycle bin - file is destroyed immediately.
+    Example: DELETE /api/logs/archive/info-2025-11-28.log
+    """
+    try:
+        # Security: Only allow deletion of archive files, not other system files
+        if not filename.startswith("info-") or not filename.endswith(".log"):
+            return jsonify({
+                "status": "error",
+                "message": "Invalid filename format"
+            }), 400
+
+        archive_path = AppLogger._get_archive_path()
+        file_path = os.path.join(archive_path, filename)
+
+        # Security: Prevent path traversal attacks
+        if not os.path.abspath(file_path).startswith(os.path.abspath(archive_path)):
+            return jsonify({
+                "status": "error",
+                "message": "Access denied"
+            }), 403
+
+        # Check if file exists
+        if not os.path.exists(file_path):
+            return jsonify({
+                "status": "error",
+                "message": "Archive file not found"
+            }), 404
+
+        # PERMANENT DELETION (no recycle bin)
+        os.remove(file_path)
+
+        AppLogger.log(f"ARCHIVE: Purged log file via API")  # Don't log filename (security)
+
+        return jsonify({
+            "status": "success",
+            "message": "Archive deleted permanently"
+        })
+
+    except PermissionError:
+        return jsonify({
+            "status": "error",
+            "message": "Permission denied - file may be in use"
+        }), 403
+    except Exception as e:
+        AppLogger.log(f"ARCHIVE: Deletion failed - {type(e).__name__}")  # Log error type, not details
+        return jsonify({
+            "status": "error",
+            "message": "Deletion failed"
+        }), 500
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
@@ -123,12 +222,14 @@ def not_found(error):
         "message": "Endpoint not found"
     }), 404
 
+
 @app.errorhandler(500)
 def internal_error(error):
     return jsonify({
         "status": "error",
         "message": "Internal server error"
     }), 500
+
 
 def run_api_server(host='0.0.0.0', port=5000):
     """Start Flask API server"""
@@ -137,6 +238,7 @@ def run_api_server(host='0.0.0.0', port=5000):
         app.run(host=host, port=port, debug=False, threaded=True)
     except Exception as e:
         AppLogger.log(f"API server failed: {e}")
+
 
 if __name__ == '__main__':
     run_api_server()
