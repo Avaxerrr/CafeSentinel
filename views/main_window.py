@@ -21,9 +21,9 @@ class StatusLight(QFrame):
 
     def set_status(self, status):
         if status == 'good':
-            self.light.setStyleSheet("background-color: #00FF00; border-radius: 15px; box-shadow: 0 0 10px #00FF00;")
+            self.light.setStyleSheet("background-color: #00FF00; border-radius: 15px;")
         elif status == 'bad':
-            self.light.setStyleSheet("background-color: #FF0000; border-radius: 15px; box-shadow: 0 0 10px #FF0000;")
+            self.light.setStyleSheet("background-color: #FF0000; border-radius: 15px;")
         else:
             self.light.setStyleSheet("background-color: #444; border-radius: 15px;")
 

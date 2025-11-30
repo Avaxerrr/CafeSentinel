@@ -2,36 +2,40 @@ import json
 import time
 import os
 from datetime import datetime
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Slot
 
+# PRESREVED YOUR EXACT IMPORTS
 from models.network_tools import NetworkTools
 from models.event_logger import EventLogger
 from models.discord_notifier import DiscordNotifier
 from models.screen_capture import ScreenCapture
 from models.app_logger import AppLogger
 from models.session_manager import SessionManager
-from models.config_manager import ConfigManager  # NEW IMPORT
+from models.config_manager import ConfigManager  # SINGLETON IMPORT
+
 
 class SentinelWorker(QObject):
     sig_status_update = Signal(str, bool, bool, bool)
     sig_pc_update = Signal(list)
 
-    def __init__(self, config_path="config.json"):
+    def __init__(self):
         super().__init__()
         self.running = True
         self.privacy_mode = False
 
-        AppLogger.log("SYS_INIT: Kernel thread attached (Hot-Reload Active).")
+        AppLogger.log("SYS_INIT: Kernel thread attached (Singleton Mode).")
 
-        # 1. Ensure Config Exists (Self-Healing)
-        self.config_abs_path = ConfigManager.ensure_config_exists(config_path)
-        self.last_cfg_mtime = 0
+        # GET SINGLETON INSTANCE (Phase 1 Change)
+        self.cfg_mgr = ConfigManager.instance()
 
-        # 2. Load Initial Config
-        self.config = self._load_config_safe()
+        # LOAD INITIAL CONFIG FROM MEMORY
+        self.config = self.cfg_mgr.get_config()
 
-        # 3. Init Variables
-        self.pc_list = self.generate_pc_list()
+        # CONNECT SIGNAL for Hot-Reload
+        # This replaces the old "check file timestamp" logic
+        self.cfg_mgr.sig_config_changed.connect(self.on_config_updated)
+
+        # Init Variables
         self.current_client_count = 0
 
         # Incidents
@@ -47,41 +51,26 @@ class SentinelWorker(QObject):
         # Settings
         self.last_screenshot_time = datetime.now()
         self._update_settings()
+        self.pc_list = self.generate_pc_list()
 
-    def _load_config_safe(self):
-        """Wrapper for ConfigManager loader that handles mtime updates."""
-        if os.path.exists(self.config_abs_path):
-            self.last_cfg_mtime = os.path.getmtime(self.config_abs_path)
-            return ConfigManager.load_config(self.config_abs_path)
-        return {}
+    @Slot(dict)
+    def on_config_updated(self, new_config):
+        """Triggered automatically when ConfigManager emits change signal."""
+        AppLogger.log("CFG_WATCH: Signal received. Updating Sentinel...")
 
-    def check_hot_reload(self):
-        """Checks if config file has changed and reloads it."""
-        if not os.path.exists(self.config_abs_path):
-            # If file was deleted while running, recreate it!
-            ConfigManager.ensure_config_exists()
-            return
+        # Update Config Object
+        self.config = new_config
 
-        current_mtime = os.path.getmtime(self.config_abs_path)
-        if current_mtime > self.last_cfg_mtime:
-            AppLogger.log("CFG_WATCH: Change detected. Reloading...")
+        # Update Modules
+        self.notifier.update_config(self.config)
+        self.session_manager.update_config(self.config)
+        self.camera = ScreenCapture(self.config)  # Re-init camera
 
-            new_config = ConfigManager.load_config(self.config_abs_path)
+        # Update Locals
+        self._update_settings()
+        self.pc_list = self.generate_pc_list()
 
-            if new_config:  # Only update if valid JSON
-                self.config = new_config
-                self.last_cfg_mtime = current_mtime
-
-                # Update Modules
-                self.notifier.update_config(self.config)
-                self.session_manager.update_config(self.config)
-                self.camera = ScreenCapture(self.config)
-
-                # Update Locals
-                self._update_settings()
-                self.pc_list = self.generate_pc_list()
-
-                AppLogger.log("CFG_WATCH: Hot Reload Complete.")
+        AppLogger.log("CFG_WATCH: Hot Reload Complete.")
 
     def _update_settings(self):
         """Central place to update local vars from config."""
@@ -93,10 +82,10 @@ class SentinelWorker(QObject):
         self.retry_delay = verify.get('retry_delay_seconds', 1.0)
         self.secondary_dns = verify.get('secondary_target', '1.1.1.1')
 
-        # Load minimum duration (default to 0 if missing so behavior doesn't break)
+        # Load minimum duration
         self.min_incident_duration = verify.get('min_incident_duration_seconds', 0)
 
-        # Targets (Just log them for debug)
+        # Targets
         targets = self.config.get('targets', {})
         self.target_router = targets.get('router')
         self.target_server = targets.get('server')
@@ -104,7 +93,6 @@ class SentinelWorker(QObject):
 
     def generate_pc_list(self):
         settings = self.config.get('monitor_settings', {})
-        # Use .get() without fallbacks where possible, or safe logic
         subnet = settings.get('pc_subnet', '192.168.1')
         start = settings.get('pc_start_range', 110)
         count = settings.get('pc_count', 20)
@@ -156,12 +144,11 @@ class SentinelWorker(QObject):
             duration_str = str(duration).split('.')[0]
 
             # Hysteresis Check
-            # If the outage was shorter than our threshold, ignore it completely.
             if duration_seconds < self.min_incident_duration:
                 AppLogger.log(f"IGNORE: {name} glitch detected ({duration_seconds:.1f}s) - Suppressed.")
                 return None
 
-            # If we are here, it's a real incident
+            # Real incident recovery
             AppLogger.log(f"RECOVERY: {name} Restored | Duration: {duration_str}")
             EventLogger.log_resolution(down_start_time, now, f"{name}_DOWN")
 
@@ -173,8 +160,6 @@ class SentinelWorker(QObject):
             return None
         return down_start_time
 
-    # --- MAIN LOOP ---
-
     def start_monitoring(self):
         AppLogger.log("DAEMON: Monitoring Active")
 
@@ -183,8 +168,13 @@ class SentinelWorker(QObject):
             timestamp = datetime.now().strftime("%H:%M:%S")
 
             try:
-                # 0. Hot Reload
-                self.check_hot_reload()
+
+                # FG_WATCH: Dirty flag checking
+                dirty_status = self.cfg_mgr.check_and_clear_dirty()
+                if dirty_status:
+                    AppLogger.log("CFG_WATCH: Dirty flag detected! Reloading...")
+                    new_config = self.cfg_mgr.get_config()
+                    self.on_config_updated(new_config)
 
                 # 1. Get Targets (Clean, no hardcoding)
                 targets = self.config.get('targets', {})
@@ -192,9 +182,9 @@ class SentinelWorker(QObject):
                 server_ip = targets.get('server')
                 internet_ip = targets.get('internet')
 
-                # SAFETY CHECK: If IPs are missing from config, skip scan
+                # SAFETY CHECK
                 if not router_ip or not server_ip or not internet_ip:
-                    AppLogger.log("WARN: Targets missing in config. Check JSON.")
+                    AppLogger.log("WARN: Targets missing in config. Check Settings.")
                     time.sleep(5)
                     continue
 
@@ -219,7 +209,7 @@ class SentinelWorker(QObject):
                     else:
                         internet_ok = True
 
-                # 4. Client Scan (With Freeze Logic)
+                # 4. Client Scan
                 if router_ok:
                     online_clients = NetworkTools.scan_hosts(self.pc_list)
                     self.current_client_count = len(online_clients)
