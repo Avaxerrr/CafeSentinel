@@ -116,27 +116,27 @@ class ConfigManager(QObject):
                 decrypted_data = self.cipher.decrypt(encrypted_data)
                 self.config = json.loads(decrypted_data.decode())
             except Exception as e:
-                AppLogger.log(f"CONFIG: ⚠️ Encryption Load Error {e}. Using Defaults.")
+                AppLogger.log("CONFIG: ⚠️ Load error. Using defaults.")
                 self.config = self.DEFAULT_CONFIG.copy()
 
         # 2. Check for Legacy JSON (Migration)
         elif os.path.exists(self.abs_legacy_path):
-            AppLogger.log("CONFIG: Legacy config.json found. Migrating to Encrypted...")
+            AppLogger.log("CONFIG: Legacy format detected. Upgrading...")
             try:
                 with open(self.abs_legacy_path, 'r') as f:
                     self.config = json.load(f)
 
                 self._save_to_disk(self.config)
                 os.rename(self.abs_legacy_path, self.abs_legacy_path + ".bak")
-                AppLogger.log("CONFIG: Migration Complete. 'config.json' -> 'cscf.dll'")
+                AppLogger.log("CONFIG: Upgrade complete.")
             except Exception as e:
-                AppLogger.log(f"CONFIG: Migration Failed {e}. Using Defaults.")
+                AppLogger.log("CONFIG: Upgrade failed. Using defaults.")
                 self.config = self.DEFAULT_CONFIG.copy()
                 self._save_to_disk(self.config)
 
         # 3. Fresh Install
         else:
-            AppLogger.log("CONFIG: No config found. Generating default encrypted config...")
+            AppLogger.log("CONFIG: Initializing with default settings...")
             self.config = self.DEFAULT_CONFIG.copy()
             self._save_to_disk(self.config)
 
@@ -209,7 +209,7 @@ class ConfigManager(QObject):
                 shutil.copy(self.abs_config_path, backup_path)
                 self._cleanup_old_backups()
         except Exception as e:
-            AppLogger.log(f"CONFIG: Backup failed {e}")
+            AppLogger.log("CONFIG: Backup operation failed.")
 
     def _cleanup_old_backups(self):
         """Keeps only the last 10 backups."""

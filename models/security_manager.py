@@ -4,6 +4,8 @@ import json
 import hashlib
 from cryptography.fernet import Fernet
 import base64
+
+from models.app_logger import AppLogger
 from utils.resource_manager import ResourceManager
 
 
@@ -78,7 +80,7 @@ class SecurityManager:
 
             return json.loads(decrypted_data.decode())
         except Exception as e:
-            print(f"Vault Load Error: {e}")
+            AppLogger.log("SECURITY: Authentication system initialization failed.")
             return None
 
     @staticmethod

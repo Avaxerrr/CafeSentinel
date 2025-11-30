@@ -8,10 +8,11 @@ from PySide6.QtCore import QObject, Qt, QRect, QTimer
 
 import resources_rc
 import api_server
+from models.security_manager import SecurityManager
 from views.main_window import MainWindow
 from models.sentinel_worker import SentinelWorker
 from models.app_logger import AppLogger
-
+from views.settings_dialog import SettingsDialog
 
 
 # --- HELPER FUNCTIONS FOR WATCHDOG ---
@@ -153,6 +154,9 @@ class SystemTrayController(QObject):
             AppLogger.log("⚠️ App will continue without remote config capability")
 
     def setup_menu(self):
+        self.action_settings = QAction("Settings", self.menu)
+        self.action_settings.triggered.connect(self.open_settings_dialog)
+        self.menu.addAction(self.action_settings)
         self.action_open = QAction("Open Monitor", self.menu)
         self.action_open.triggered.connect(self.show_window)
         self.menu.addAction(self.action_open)
@@ -226,3 +230,24 @@ class SystemTrayController(QObject):
                 self.app.quit()
             else:
                 QMessageBox.warning(None, "Access Denied", "Incorrect Password!")
+
+    def open_settings_dialog(self):
+        """Open the settings dialog after admin password verification"""
+        from PySide6.QtWidgets import QInputDialog, QLineEdit
+
+        # Verify Admin Password
+        password, ok = QInputDialog.getText(
+            None,
+            "Security Check",
+            "Enter Admin Password to access Settings:",
+            QLineEdit.Password
+        )
+
+        if ok and password:
+            if SecurityManager.verify_admin(password):
+                AppLogger.log("SETTINGS: Dialog opened with valid credentials")
+                dialog = SettingsDialog()
+                dialog.exec()
+            else:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(None, "Access Denied", "Incorrect Admin Password!")

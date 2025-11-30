@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from models.app_logger import AppLogger
-from models.config_manager import ConfigManager # SINGLETON IMPORT
+from models.config_manager import ConfigManager
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests
@@ -81,6 +81,33 @@ def list_backups():
         return jsonify({
             "status": "success",
             "backups": backups
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
+@app.route('/api/logs', methods=['GET'])
+def get_logs():
+    """
+    Returns recent logs from memory buffer.
+    Query param: ?lines=500 (optional, default 500)
+    """
+    try:
+        # Get optional line count from query param
+        line_count = request.args.get('lines', default=500, type=int)
+
+        # Clamp to reasonable range (prevent abuse)
+        line_count = max(10, min(line_count, 1000))
+
+        logs = AppLogger.get_recent_logs(line_count)
+
+        return jsonify({
+            "status": "success",
+            "lines": len(logs),
+            "logs": logs
         })
     except Exception as e:
         return jsonify({
