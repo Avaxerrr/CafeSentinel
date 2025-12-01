@@ -7,7 +7,7 @@ CafeSentinel/
 |         +--- router_ok.svg
 |         +--- server_bad.svg
 |         \--- server_ok.svg
-|
+|    
 +--- controllers
 |    +--- __init__.py
 |    \--- system_tray_app.py
@@ -25,6 +25,7 @@ CafeSentinel/
 |    +--- session_manager.py
 |    \--- startup_manager.py
 |    
++--- probes
 +--- utils
 |    +--- __init__.py
 |    \--- resource_manager.py
@@ -32,12 +33,12 @@ CafeSentinel/
 +--- views
 |    +--- __init__.py
 |    +--- main_window.py
+|    +--- settings_dialog.py
 |    \--- setup_wizard.py
 |    
 +--- api_server.py
 +--- build.py
-+--- config.json
-+--- file-structure.txt
++--- file-structure-for-CafeSentinel.txt
 +--- icon.ico
 +--- icon.png
 +--- icon.svg
