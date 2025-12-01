@@ -1,58 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QLabel, QGridLayout, QFrame)
 from PySide6.QtCore import Qt, Signal, QTimer, QDateTime, QSettings
-from PySide6.QtGui import QColor, QPalette, QIcon, QFont
-
-
-class StatusLight(QFrame):
-    def __init__(self, label_text):
-        super().__init__()
-        self.setFixedSize(100, 80)
-        self.layout = QVBoxLayout(self)
-        self.light = QLabel()
-        self.light.setFixedSize(30, 30)
-        self.light.setStyleSheet("background-color: #444; border-radius: 15px; border: 2px solid #222;")
-        self.light.setAlignment(Qt.AlignCenter)
-        self.label = QLabel(label_text)
-        self.label.setStyleSheet("color: #AAA; font-weight: bold; font-size: 12px;")
-        self.label.setAlignment(Qt.AlignCenter)
-        self.layout.addWidget(self.light, alignment=Qt.AlignCenter)
-        self.layout.addWidget(self.label, alignment=Qt.AlignCenter)
-
-    def set_status(self, status):
-        if status == 'good':
-            self.light.setStyleSheet("background-color: #00FF00; border-radius: 15px;")
-        elif status == 'bad':
-            self.light.setStyleSheet("background-color: #FF0000; border-radius: 15px;")
-        else:
-            self.light.setStyleSheet("background-color: #444; border-radius: 15px;")
-
-
-class PCBox(QFrame):
-    def __init__(self, pc_name):
-        super().__init__()
-        self.setFixedSize(80, 60)
-        self.setStyleSheet("background-color: #333; border-radius: 5px; border: 1px solid #555;")
-        layout = QVBoxLayout(self)
-        self.name_lbl = QLabel(pc_name)
-        self.name_lbl.setAlignment(Qt.AlignCenter)
-        self.name_lbl.setStyleSheet("color: white; font-weight: bold;")
-        self.status_lbl = QLabel("Checking...")
-        self.status_lbl.setAlignment(Qt.AlignCenter)
-        self.status_lbl.setStyleSheet("color: #888; font-size: 10px;")
-        layout.addWidget(self.name_lbl)
-        layout.addWidget(self.status_lbl)
-
-    def set_active(self, is_alive):
-        if is_alive:
-            self.setStyleSheet("background-color: #005500; border-radius: 5px; border: 1px solid #00FF00;")
-            self.status_lbl.setText("ONLINE")
-            self.status_lbl.setStyleSheet("color: #00FF00; font-size: 10px;")
-        else:
-            self.setStyleSheet("background-color: #333; border-radius: 5px; border: 1px solid #555;")
-            self.status_lbl.setText("OFFLINE")
-            self.status_lbl.setStyleSheet("color: #888; font-size: 10px;")
-
+from views.custom_widgets import StatusLight, PCBox
 
 class MainWindow(QMainWindow):
     sig_close_requested = Signal()
@@ -135,14 +84,12 @@ class MainWindow(QMainWindow):
         self.sig_close_requested.emit()
 
     # --- SLOTS ---
-    def update_infrastructure(self, timestamp, router_ok, server_ok, isp_ok):
-        # Updates the status lights independently based on the booleans received.
-        self.status_msg.setText(f"Last Scan: {timestamp}  |  Monitoring Active")
-
-        # Update Lights Independently
-        self.router_light.set_status('good' if router_ok else 'bad')
-        self.server_light.set_status('good' if server_ok else 'bad')
-        self.isp_light.set_status('good' if isp_ok else 'bad')
+    def update_infrastructure(self, status_dict):
+        # status_dict = {"timestamp": "...", "router": True, "server": False, "internet": True}
+        self.status_msg.setText(f"Last Scan: {status_dict['timestamp']}  |  Monitoring Active")
+        self.router_light.set_status('good' if status_dict["router"] else 'bad')
+        self.server_light.set_status('good' if status_dict["server"] else 'bad')
+        self.isp_light.set_status('good' if status_dict["internet"] else 'bad')
 
     def update_pc_grid(self, pc_data_list):
         if not self.pc_widgets:

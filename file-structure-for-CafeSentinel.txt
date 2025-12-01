@@ -1,13 +1,25 @@
 CafeSentinel/
 +--- assets
-|    \--- icons
-|         +--- net_bad.svg
-|         +--- net_ok.svg
-|         +--- router_bad.svg
-|         +--- router_ok.svg
-|         +--- server_bad.svg
-|         \--- server_ok.svg
+|    +--- icons
+|    |    +--- net_bad.svg
+|    |    +--- net_ok.svg
+|    |    +--- router_bad.svg
+|    |    +--- router_ok.svg
+|    |    +--- server_bad.svg
+|    |    \--- server_ok.svg
+|    |    
+|    +--- internet_off.svg
+|    +--- internet_on.svg
+|    +--- pc.svg
+|    +--- pc_off.svg
+|    +--- pc_offaa.svg
+|    +--- pc_on.svg
+|    +--- router_off.svg
+|    +--- router_on.svg
+|    +--- server_off.svg
+|    \--- server_on.svg
 |    
++--- config_backups
 +--- controllers
 |    +--- __init__.py
 |    \--- system_tray_app.py
@@ -32,19 +44,24 @@ CafeSentinel/
 |    
 +--- views
 |    +--- __init__.py
+|    +--- custom_widgets.py
 |    +--- main_window.py
 |    +--- settings_dialog.py
 |    \--- setup_wizard.py
 |    
 +--- api_server.py
 +--- build.py
++--- es.py
++--- es1.1.py
++--- es2.py
 +--- file-structure-for-CafeSentinel.txt
 +--- icon.ico
 +--- icon.png
 +--- icon.svg
 +--- interface.py
++--- internet.svg
 +--- README.md
 +--- resources.qrc
 +--- resources_rc.py
-+--- Technical-Documentation.md
++--- Technical-Documentation-for-CafeSentinel.md
 \--- watchdog_service.py

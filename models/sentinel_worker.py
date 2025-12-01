@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from PySide6.QtCore import QObject, Signal, Slot
 
-# PRESREVED YOUR EXACT IMPORTS
+# PRESERVED YOUR EXACT IMPORTS
 from models.network_tools import NetworkTools
 from models.event_logger import EventLogger
 from models.discord_notifier import DiscordNotifier
@@ -15,7 +15,7 @@ from models.config_manager import ConfigManager  # SINGLETON IMPORT
 
 
 class SentinelWorker(QObject):
-    sig_status_update = Signal(str, bool, bool, bool)
+    sig_status_update = Signal(dict)
     sig_pc_update = Signal(list)
 
     def __init__(self):
@@ -25,14 +25,13 @@ class SentinelWorker(QObject):
 
         AppLogger.log("SYS_INIT: Kernel thread attached (Singleton Mode).")
 
-        # GET SINGLETON INSTANCE (Phase 1 Change)
+        # GET SINGLETON INSTANCE
         self.cfg_mgr = ConfigManager.instance()
 
         # LOAD INITIAL CONFIG FROM MEMORY
         self.config = self.cfg_mgr.get_config()
 
         # CONNECT SIGNAL for Hot-Reload
-        # This replaces the old "check file timestamp" logic
         self.cfg_mgr.sig_config_changed.connect(self.on_config_updated)
 
         # Init Variables
@@ -168,7 +167,6 @@ class SentinelWorker(QObject):
             timestamp = datetime.now().strftime("%H:%M:%S")
 
             try:
-
                 # FG_WATCH: Dirty flag checking
                 dirty_status = self.cfg_mgr.check_and_clear_dirty()
                 if dirty_status:
@@ -231,8 +229,14 @@ class SentinelWorker(QObject):
                 if router_ok:
                     self.isp_down_start = self._process_component("ISP", internet_ok, self.isp_down_start)
 
-                # 6. Update GUI
-                self.sig_status_update.emit(timestamp, router_ok, server_ok, internet_ok)
+                # 6. Update GUI -- emit new dict
+                status_dict = {
+                    "timestamp": timestamp,
+                    "router": router_ok,
+                    "server": server_ok,
+                    "internet": internet_ok
+                }
+                self.sig_status_update.emit(status_dict)
 
                 # 7. Routine Task
                 self.handle_routine_screenshot()

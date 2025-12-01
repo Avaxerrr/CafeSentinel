@@ -14,7 +14,6 @@ from models.sentinel_worker import SentinelWorker
 from models.app_logger import AppLogger
 from views.settings_dialog import SettingsDialog
 
-
 # --- HELPER FUNCTIONS FOR WATCHDOG ---
 def is_compiled():
     """Check if running as compiled EXE (Nuitka or PyInstaller)."""
@@ -26,7 +25,6 @@ def is_compiled():
     except ImportError:
         return False
 
-
 def process_exists(process_name):
     """Check if a process is running using tasklist."""
     try:
@@ -36,7 +34,6 @@ def process_exists(process_name):
     except Exception as e:
         AppLogger.log(f"ERROR: process_exists check failed for {process_name}: {e}")
         return False
-
 
 def ensure_watchdog_running():
     """Checks if SentinelService is running, if not, launches it."""
@@ -67,7 +64,6 @@ def ensure_watchdog_running():
         AppLogger.log("WATCHDOG: Launch command sent successfully.")
     except Exception as e:
         AppLogger.log(f"WATCHDOG FATAL: Failed to launch service: {e}")
-
 
 # -------------------------------------
 
@@ -165,17 +161,17 @@ class SystemTrayController(QObject):
         self.action_quit.triggered.connect(self.verify_quit)
         self.menu.addAction(self.action_quit)
 
-    def update_infrastructure_icons(self, timestamp, router_ok, server_ok, internet_ok):
+    def update_infrastructure_icons(self, status_dict):
+        # status_dict = {"timestamp": "...", "router": True, "server": False, "internet": True}
         def update_single(key, is_online):
             data = self.trays[key]
             tray = data["obj"]
             tray.setIcon(data["icon_ok"] if is_online else data["icon_bad"])
             status = "ONLINE" if is_online else "OFFLINE"
-            tray.setToolTip(f"{data['name']}: {status}\nLast Scan: {timestamp}")
-
-        update_single("router", router_ok)
-        update_single("server", server_ok)
-        update_single("internet", internet_ok)
+            tray.setToolTip(f"{data['name']}: {status}\nLast Scan: {status_dict['timestamp']}")
+        update_single("router", status_dict["router"])
+        update_single("server", status_dict["server"])
+        update_single("internet", status_dict["internet"])
 
     def update_client_count(self, pc_data_list):
         online_count = sum(1 for pc in pc_data_list if pc['is_alive'])
