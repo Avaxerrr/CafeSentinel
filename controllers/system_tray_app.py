@@ -150,12 +150,12 @@ class SystemTrayController(QObject):
             AppLogger.log("⚠️ App will continue without remote config capability")
 
     def setup_menu(self):
-        self.action_settings = QAction("Settings", self.menu)
-        self.action_settings.triggered.connect(self.open_settings_dialog)
-        self.menu.addAction(self.action_settings)
         self.action_open = QAction("Open Monitor", self.menu)
         self.action_open.triggered.connect(self.show_window)
         self.menu.addAction(self.action_open)
+        self.action_settings = QAction("Settings", self.menu)
+        self.action_settings.triggered.connect(self.open_settings_dialog)
+        self.menu.addAction(self.action_settings)
         self.menu.addSeparator()
         self.action_quit = QAction("Exit Sentinel", self.menu)
         self.action_quit.triggered.connect(self.verify_quit)

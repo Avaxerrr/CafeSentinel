@@ -1,0 +1,185 @@
+/* cafesentinel_styles.qss */
+
+/* --- General - Apply dark BG only to main containers --- */
+QMainWindow, QDialog {
+    background-color: #121212;
+}
+
+QWidget {
+    color: #CCCCCC;
+    background-color: #121212;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+/* --- Labels transparent by default --- */
+QLabel {
+    background: transparent;
+    color: #CCCCCC;
+}
+
+QFrame[panel="true"] {
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    border: 1px solid #333333;
+}
+
+QLabel[class="dashboard-clock"] {
+    background: transparent;
+    color: #FFFFFF;
+    font-size: 52px;
+    font-weight: bold;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+QLabel[class="dashboard-footer-label"] {
+    background: transparent;
+    color: #888;
+    font-style: italic;
+    font-size: 11px;
+}
+
+QLabel[class="dashboard-uptime"] {
+    background: transparent;
+    color: #00FF00;
+    font-weight: bold;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+
+QScrollArea {
+    background: transparent;
+    border: none;
+}
+
+/* --- StatusIndicator Cards --- */
+QFrame[class="status-indicator"] {
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    border: 1px solid #333333;
+}
+
+QLabel[class="status-title"] {
+    background: transparent;
+    color: #888;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+QLabel[class="status-title"][state="online"] {
+    color: #FFFFFF;
+}
+
+QLabel[class="status-title"][state="offline"] {
+    color: #FF4444;
+}
+
+QLabel[class="status-light"] {
+    background-color: #555555;
+    border-radius: 7px;
+}
+
+QLabel[class="status-light"][state="online"] {
+    background-color: #00FF00;
+}
+
+QLabel[class="status-light"][state="offline"] {
+    background-color: #FF4444;
+}
+
+QLabel[class="status-label"] {
+    background: transparent;
+    color: #888;
+    font-weight: bold;
+}
+
+QLabel[class="status-label"][state="online"] {
+    color: #00FF00;
+}
+
+QLabel[class="status-label"][state="offline"] {
+    color: #FF4444;
+}
+
+/* --- SentinelPCBox --- */
+QFrame[class="pc-box"] {
+    background-color: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 6px;
+}
+
+QFrame[class="pc-box"][state="online"] {
+    background-color: #0a2e0a;
+    border: 2px solid #00FF00;
+}
+
+QLabel[class="pc-name"] {
+    background: transparent;
+    color: #555555;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+QLabel[class="pc-name"][state="online"] {
+    color: #FFFFFF;
+    font-weight: 900;
+}
+
+QLabel[class="pc-status"] {
+    background: transparent;
+    color: #444444;
+    font-size: 10px;
+}
+
+QLabel[class="pc-status"][state="online"] {
+    color: #00FF00;
+    font-weight: bold;
+}
+
+/* --- HeartbeatBar --- */
+QFrame[class="heartbeat-bg"] {
+    background-color: #333333;
+    border-radius: 2px;
+}
+
+QFrame[class="heartbeat-pulse"] {
+    background-color: #00FF00;
+    border-radius: 2px;
+}
+
+/* --- Footer --- */
+QFrame[class="dashboard-footer"] {
+    background-color: #1e1e1e;
+    border-top: 1px solid #333333;
+    border-radius: 4px;
+}
+
+/* --- Sleek, Thin, Modern Dark Scrollbar --- */
+QScrollBar:vertical, QScrollBar:horizontal {
+    background: transparent;
+    border: none;
+    width: 7px;
+    height: 7px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background: #2c2c2c;
+    border: 1px solid #404040;
+    min-height: 24px;
+    min-width: 24px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background: #444444;
+    border: 1px solid #555555;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line,
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+    border: none;
+    width: 0;
+    height: 0;
+}

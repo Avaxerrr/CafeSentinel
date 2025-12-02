@@ -46,6 +46,8 @@ def main():
 
     # 2. Initialize Qt Application
     app = QApplication(sys.argv)
+    with open("cafesentinel_styles.qss", "r") as f:
+        app.setStyleSheet(f.read())
     app.setQuitOnLastWindowClosed(False)
 
     # 3. Check/Create Security Vault

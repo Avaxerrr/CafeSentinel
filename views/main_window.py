@@ -1,7 +1,8 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                               QLabel, QGridLayout, QFrame)
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QScrollArea
+)
 from PySide6.QtCore import Qt, Signal, QTimer, QDateTime, QSettings
-from views.custom_widgets import StatusLight, PCBox
+from views.custom_widgets import StatusIndicator, SentinelPCBox, ResponsivePCGrid, HeartbeatBar
 
 class MainWindow(QMainWindow):
     sig_close_requested = Signal()
@@ -9,59 +10,86 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Cafe Sentinel - Monitor")
-        self.setStyleSheet("background-color: #1e1e1e;")
-
+        self.resize(950, 750)
         self.settings = QSettings("CafeSentinel", "MonitorApp")
         self.load_window_state()
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(20)
 
-        # --- TOP BAR ---
-        top_bar = QFrame()
-        top_bar.setStyleSheet("background-color: #252526; border-radius: 10px;")
-        top_layout = QHBoxLayout(top_bar)
-        top_layout.setContentsMargins(20, 10, 20, 10)
+        # Diagnostics row
+        diag_layout = QHBoxLayout()
+        self.router_stat = StatusIndicator("ROUTER")
+        self.server_stat = StatusIndicator("SERVER")
+        self.net_stat   = StatusIndicator("INTERNET")
+        diag_layout.addStretch()
+        diag_layout.addWidget(self.router_stat)
+        diag_layout.addWidget(self.server_stat)
+        diag_layout.addWidget(self.net_stat)
+        diag_layout.addStretch()
+        main_layout.addLayout(diag_layout)
 
-        self.router_light = StatusLight("ROUTER")
-        self.server_light = StatusLight("SERVER")
-        self.isp_light = StatusLight("INTERNET")
-
-        top_layout.addStretch()
-        top_layout.addWidget(self.router_light)
-        top_layout.addWidget(self.server_light)
-        top_layout.addWidget(self.isp_light)
-        top_layout.addStretch()
-
-        main_layout.addWidget(top_bar)
-
-        # --- LIVE CLOCK ---
+        # Clock & heartbeat
+        clock_container = QFrame()
+        clock_layout = QVBoxLayout(clock_container)
+        clock_layout.setSpacing(5)
+        clock_layout.setContentsMargins(0, 0, 0, 0)
         self.clock_lbl = QLabel("--:--:--")
         self.clock_lbl.setAlignment(Qt.AlignCenter)
-        self.clock_lbl.setStyleSheet(
-            "color: #00CCFF; font-size: 28px; font-weight: bold; margin-top: 10px; margin-bottom: 5px;")
-        main_layout.addWidget(self.clock_lbl)
+        self.clock_lbl.setProperty("class", "dashboard-clock")
+        self.heartbeat_bar = HeartbeatBar()
+        hb_layout = QHBoxLayout()
+        hb_layout.addStretch()
+        hb_layout.addWidget(self.heartbeat_bar)
+        hb_layout.addStretch()
+        clock_layout.addWidget(self.clock_lbl)
+        clock_layout.addLayout(hb_layout)
+        main_layout.addWidget(clock_container)
 
-        # --- LAST SCAN STATUS ---
-        self.status_msg = QLabel("Initializing...")
-        self.status_msg.setAlignment(Qt.AlignCenter)
-        self.status_msg.setStyleSheet("color: #888; font-size: 14px; font-style: italic; margin-bottom: 15px;")
-        main_layout.addWidget(self.status_msg)
+        # --- (Removed status_msg label here) ---
 
-        # --- PC GRID ---
-        grid_frame = QFrame()
-        self.grid_layout = QGridLayout(grid_frame)
+        # PC grid
         self.pc_widgets = {}
-
-        main_layout.addWidget(grid_frame)
+        self.responsive_grid = ResponsivePCGrid([])
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setProperty("class", "dashboard-scroll")
+        scroll.setWidget(self.responsive_grid)
+        main_layout.addWidget(scroll)
         main_layout.addStretch()
 
-        # --- TIMERS ---
+        # Footer (Last Scan + Uptime)
+        footer_frame = QFrame()
+        footer_frame.setProperty("class", "dashboard-footer")
+        footer_layout = QHBoxLayout(footer_frame)
+        footer_layout.setContentsMargins(15, 8, 15, 8)
+        self.scan_lbl = QLabel("Last Scan: Just now")
+        self.scan_lbl.setProperty("class", "dashboard-footer-label")
+        self.uptime_lbl = QLabel("Sentinel Uptime: 00h 00m")
+        self.uptime_lbl.setProperty("class", "dashboard-uptime")
+        footer_layout.addWidget(self.scan_lbl)
+        footer_layout.addStretch()
+        footer_layout.addWidget(self.uptime_lbl)
+        main_layout.addWidget(footer_frame)
+
+        # Timers
+        self.startup_time = QDateTime.currentDateTime()
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_clock)
+        self.timer.timeout.connect(self.update_clock_logic)
         self.timer.start(1000)
         self.update_clock()
+
+    def update_clock_logic(self):
+        now = QDateTime.currentDateTime()
+        self.clock_lbl.setText(now.toString("hh:mm:ss AP"))
+        # Uptime
+        seconds_diff = self.startup_time.secsTo(now)
+        hours = seconds_diff // 3600
+        minutes = (seconds_diff % 3600) // 60
+        self.uptime_lbl.setText(f"Sentinel Uptime: {hours:02d}h {minutes:02d}m")
 
     def update_clock(self):
         now = QDateTime.currentDateTime().toString("hh:mm:ss AP")
@@ -72,7 +100,7 @@ class MainWindow(QMainWindow):
         if geometry:
             self.restoreGeometry(geometry)
         else:
-            self.resize(900, 650)
+            self.resize(950, 750)
 
     def save_window_state(self):
         self.settings.setValue("geometry", self.saveGeometry())
@@ -83,27 +111,39 @@ class MainWindow(QMainWindow):
         self.hide()
         self.sig_close_requested.emit()
 
-    # --- SLOTS ---
+    # --- BACKEND SLOTS ---
     def update_infrastructure(self, status_dict):
-        # status_dict = {"timestamp": "...", "router": True, "server": False, "internet": True}
-        self.status_msg.setText(f"Last Scan: {status_dict['timestamp']}  |  Monitoring Active")
-        self.router_light.set_status('good' if status_dict["router"] else 'bad')
-        self.server_light.set_status('good' if status_dict["server"] else 'bad')
-        self.isp_light.set_status('good' if status_dict["internet"] else 'bad')
+        self.scan_lbl.setText(f"Last Scan: {status_dict['timestamp']}")
+        if status_dict["router"]:
+            self.router_stat.set_online()
+        else:
+            self.router_stat.set_offline()
+        if status_dict["server"]:
+            self.server_stat.set_online()
+        else:
+            self.server_stat.set_offline()
+        if status_dict["internet"]:
+            self.net_stat.set_online()
+        else:
+            self.net_stat.set_offline()
 
     def update_pc_grid(self, pc_data_list):
-        if not self.pc_widgets:
-            row, col = 0, 0
-            max_cols = 6
+        unique_names = [pc['name'] for pc in pc_data_list]
+        if set(self.pc_widgets.keys()) != set(unique_names):
+            for widget in self.pc_widgets.values():
+                widget.setParent(None)
+            pc_widget_objs = []
+            self.pc_widgets = {}
             for pc in pc_data_list:
-                widget = PCBox(pc['name'])
-                self.grid_layout.addWidget(widget, row, col)
+                widget = SentinelPCBox(pc['name'])
                 self.pc_widgets[pc['name']] = widget
-                col += 1
-                if col >= max_cols:
-                    col = 0
-                    row += 1
-
+                pc_widget_objs.append(widget)
+            self.responsive_grid.pc_widgets = pc_widget_objs
+            self.responsive_grid.reflow_items()
         for pc in pc_data_list:
-            if pc['name'] in self.pc_widgets:
-                self.pc_widgets[pc['name']].set_active(pc['is_alive'])
+            widget = self.pc_widgets.get(pc['name'])
+            if widget:
+                if pc['is_alive']:
+                    widget.set_active()
+                else:
+                    widget.set_offline()

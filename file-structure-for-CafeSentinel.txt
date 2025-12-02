@@ -51,6 +51,8 @@ CafeSentinel/
 |    
 +--- api_server.py
 +--- build.py
++--- cafesentinel_palette.py
++--- cafesentinel_styles.qss
 +--- es.py
 +--- es1.1.py
 +--- es2.py
@@ -58,8 +60,8 @@ CafeSentinel/
 +--- icon.ico
 +--- icon.png
 +--- icon.svg
++--- incidents_log.csv
 +--- interface.py
-+--- internet.svg
 +--- README.md
 +--- resources.qrc
 +--- resources_rc.py
