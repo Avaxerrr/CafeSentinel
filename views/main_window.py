@@ -48,9 +48,6 @@ class MainWindow(QMainWindow):
         clock_layout.addWidget(self.clock_lbl)
         clock_layout.addLayout(hb_layout)
         main_layout.addWidget(clock_container)
-
-        # --- (Removed status_msg label here) ---
-
         # PC grid
         self.pc_widgets = {}
         self.responsive_grid = ResponsivePCGrid([])
@@ -59,7 +56,6 @@ class MainWindow(QMainWindow):
         scroll.setProperty("class", "dashboard-scroll")
         scroll.setWidget(self.responsive_grid)
         main_layout.addWidget(scroll)
-        main_layout.addStretch()
 
         # Footer (Last Scan + Uptime)
         footer_frame = QFrame()

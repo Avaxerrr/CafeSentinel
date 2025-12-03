@@ -1,5 +1,5 @@
 # views/custom_widgets.py
-
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QGridLayout
 from PySide6.QtCore import Qt, QTimer
 
@@ -40,29 +40,58 @@ class StatusIndicator(QFrame):
     def __init__(self, title):
         super().__init__()
         self.setProperty("class", "status-indicator")
-        self.setFixedSize(140, 95)
+        self.setFixedSize(140, 120)
 
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(8, 8, 8, 8)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
 
-        h_layout = QHBoxLayout()
-        self.light = QLabel()
-        self.light.setFixedSize(14, 14)
-        self.light.setProperty("class", "status-light")
+        # --- Icon Label ---
+        self.icon_lbl = QLabel()
+        self.icon_lbl.setAlignment(Qt.AlignCenter)
+        self.icon_lbl.setProperty("class", "status-icon")
 
+        # Load icons based on title
+        title_lower = title.lower()
+        icon_on = QIcon(f":/icons/{title_lower}_on")
+        icon_off = QIcon(f":/icons/{title_lower}_off")
+
+        # Generate pixmaps from icons
+        icon_size = 28
+        self.icon_on_pixmap = icon_on.pixmap(icon_size, icon_size)
+        self.icon_off_pixmap = icon_off.pixmap(icon_size, icon_size)
+
+        # Title Label (ROUTER/SERVER/INTERNET)
         self.label = QLabel(title)
+        self.label.setAlignment(Qt.AlignCenter)
         self.label.setProperty("class", "status-title")
 
-        h_layout.addStretch()
-        h_layout.addWidget(self.light)
-        h_layout.addWidget(self.label)
-        h_layout.addStretch()
-        self.layout.addLayout(h_layout)
+        # ====== STATUS TEXT WITH CIRCLE (ONLINE/OFFLINE) ======
+        # Container for status text + circle
+        status_container = QWidget()
+        status_container.setProperty("class", "status-container")
+        status_layout = QHBoxLayout(status_container)
+        status_layout.setContentsMargins(0, 0, 0, 0)
+        status_layout.setSpacing(5)
+
+
+        # Circle/Light indicator
+        self.light = QLabel()
+        self.light.setFixedSize(12, 12)  # Smaller circle (was 14x14)
+        self.light.setProperty("class", "status-light")
 
         self.status_lbl = QLabel("WAITING")
-        self.status_lbl.setAlignment(Qt.AlignCenter)
         self.status_lbl.setProperty("class", "status-label")
-        self.layout.addWidget(self.status_lbl, 0, Qt.AlignCenter)
+
+        status_layout.addStretch()
+        status_layout.addWidget(self.light)
+        status_layout.addWidget(self.status_lbl)
+        status_layout.addStretch()
+
+        # Add all to main layout
+        self.layout.addWidget(self.icon_lbl)
+        self.layout.addWidget(self.label)
+        self.layout.addWidget(status_container)
 
         self.set_offline()
 
@@ -71,6 +100,7 @@ class StatusIndicator(QFrame):
         self.label.setProperty("state", "online")
         self.status_lbl.setProperty("state", "online")
         self.status_lbl.setText("ONLINE")
+        self.icon_lbl.setPixmap(self.icon_on_pixmap)
         self._refresh_style()
 
     def set_offline(self):
@@ -78,6 +108,7 @@ class StatusIndicator(QFrame):
         self.label.setProperty("state", "offline")
         self.status_lbl.setProperty("state", "offline")
         self.status_lbl.setText("OFFLINE")
+        self.icon_lbl.setPixmap(self.icon_off_pixmap)
         self._refresh_style()
 
     def _refresh_style(self):
@@ -89,8 +120,9 @@ class StatusIndicator(QFrame):
         self.status_lbl.style().polish(self.status_lbl)
 
 
+
 class SentinelPCBox(QFrame):
-    WIDTH, HEIGHT = 100, 75
+    WIDTH, HEIGHT = 100, 90
 
     def __init__(self, pc_name):
         super().__init__()
@@ -98,8 +130,21 @@ class SentinelPCBox(QFrame):
         self.setProperty("class", "pc-box")
 
         self.layout = QVBoxLayout(self)
-        self.layout.setSpacing(2)
-        self.layout.setContentsMargins(8, 6, 8, 6)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(4, 10, 4, 8)
+
+        # --- Icon Label ---
+        self.icon_lbl = QLabel()
+        self.icon_lbl.setAlignment(Qt.AlignCenter)
+        self.icon_lbl.setFixedHeight(32)
+
+        # Load as QIcon first
+        icon_on_vec = QIcon(":/icons/pc_on")
+        icon_off_vec = QIcon(":/icons/pc_off")
+
+        target_size = 28
+        self.icon_on = icon_on_vec.pixmap(target_size, target_size)
+        self.icon_off = icon_off_vec.pixmap(target_size, target_size)
 
         self.name_lbl = QLabel(pc_name)
         self.name_lbl.setAlignment(Qt.AlignCenter)
@@ -109,6 +154,8 @@ class SentinelPCBox(QFrame):
         self.status_lbl.setAlignment(Qt.AlignCenter)
         self.status_lbl.setProperty("class", "pc-status")
 
+        # Add widgets to layout
+        self.layout.addWidget(self.icon_lbl)
         self.layout.addWidget(self.name_lbl)
         self.layout.addWidget(self.status_lbl)
 
@@ -119,6 +166,7 @@ class SentinelPCBox(QFrame):
         self.name_lbl.setProperty("state", "online")
         self.status_lbl.setProperty("state", "online")
         self.status_lbl.setText("ACTIVE")
+        self.icon_lbl.setPixmap(self.icon_on)
         self._refresh_style()
 
     def set_offline(self):
@@ -126,6 +174,7 @@ class SentinelPCBox(QFrame):
         self.name_lbl.setProperty("state", "offline")
         self.status_lbl.setProperty("state", "offline")
         self.status_lbl.setText("OFFLINE")
+        self.icon_lbl.setPixmap(self.icon_off)
         self._refresh_style()
 
     def _refresh_style(self):

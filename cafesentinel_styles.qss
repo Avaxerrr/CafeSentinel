@@ -56,14 +56,26 @@ QScrollArea {
 QFrame[class="status-indicator"] {
     background-color: #1e1e1e;
     border-radius: 8px;
-    border: 1px solid #333333;
+    border: 2px solid #333333;
+    padding: 10px 8px 8px 8px;
 }
 
+/* Icon at the top */
+QLabel[class="status-icon"] {
+    background: transparent;
+    margin-top: 5px;
+    margin-bottom: 2px;  /* Control spacing between icon and title */
+}
+
+/* Title text (ROUTER/SERVER/INTERNET) */
 QLabel[class="status-title"] {
     background: transparent;
     color: #888;
-    font-weight: bold;
+    font-weight: 600;  /* Not bold */
     font-size: 11px;
+    margin-top: 0px;
+    margin-bottom: 8px;  /* Control spacing between title and status */
+    padding: 0px;
 }
 
 QLabel[class="status-title"][state="online"] {
@@ -74,9 +86,10 @@ QLabel[class="status-title"][state="offline"] {
     color: #FF4444;
 }
 
+/* Small circle indicator next to status text */
 QLabel[class="status-light"] {
     background-color: #555555;
-    border-radius: 7px;
+    border-radius: 6px;
 }
 
 QLabel[class="status-light"][state="online"] {
@@ -87,10 +100,19 @@ QLabel[class="status-light"][state="offline"] {
     background-color: #FF4444;
 }
 
+/* Container for status text + circle - make it transparent */
+QWidget[class="status-container"] {
+    background: transparent;
+}
+
+/* Status text (ONLINE/OFFLINE) */
 QLabel[class="status-label"] {
     background: transparent;
     color: #888;
     font-weight: bold;
+    font-size: 14px;
+    margin: 0px;
+    padding: 0px;
 }
 
 QLabel[class="status-label"][state="online"] {
@@ -104,7 +126,6 @@ QLabel[class="status-label"][state="offline"] {
 /* --- SentinelPCBox --- */
 QFrame[class="pc-box"] {
     background-color: #1e1e1e;
-    border: 1px solid #333333;
     border-radius: 6px;
 }
 
@@ -165,7 +186,6 @@ QScrollBar:vertical, QScrollBar:horizontal {
 
 QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
     background: #2c2c2c;
-    border: 1px solid #404040;
     min-height: 24px;
     min-width: 24px;
     border-radius: 4px;
@@ -173,7 +193,6 @@ QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
 
 QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
     background: #444444;
-    border: 1px solid #555555;
 }
 
 QScrollBar::add-line, QScrollBar::sub-line,
