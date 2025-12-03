@@ -475,3 +475,48 @@ QLabel[class="field-label"] {
     color: #CCCCCC;
     margin-bottom: 0px;
 }
+
+/* ========================================================================
+   SECTION 5: CONTEXT MENUS (TRAY & POPUPS)
+   ======================================================================== */
+
+QMenu {
+    background-color: #252526;   /* Match Panel Background */
+    border: 1px solid #3E3E42;   /* Standard border */
+    border-radius: 4px;          /* Modern rounded corners */
+    padding: 3px 0px;            /* "Breathing room" at top/bottom */
+    color: #CCCCCC;
+}
+
+/* The Menu Items */
+QMenu::item {
+    background-color: transparent;
+    padding: 6px 15px 6px 15px;  /* Generous padding for a "touch-friendly" look */
+    margin: 2px 6px;             /* Small side margins so highlight floats inside */
+    border-radius: 2px;          /* Rounded selection rectangle */
+    font-weight: 500;
+}
+
+/* Hover/Selected State - Matches your Brand */
+QMenu::item:selected {
+    background-color: #00C853;   /* BRAND GREEN */
+    color: #1E1E1E;              /* Dark text for high contrast */
+}
+
+/* Separator Line */
+QMenu::separator {
+    height: 1px;
+    background-color: #3E3E42;
+    margin: 6px 15px;            /* Indented separator looks cleaner */
+}
+
+/* Disabled Items */
+QMenu::item:disabled {
+    color: #555555;
+    background-color: transparent;
+}
+
+/* Icons (if you use them) */
+QMenu::icon {
+    padding-left: 15px;
+}
