@@ -2,14 +2,14 @@
 
 /* --- General - Apply dark BG only to main containers --- */
 QMainWindow, QDialog {
-    background-color: #121212;
+    background-color: #1E1E1E;  /* WAS: #121212 */
 }
 
 QWidget {
     color: #CCCCCC;
-    background-color: #121212;
+    background-color: #1E1E1E;
     font-family: 'Segoe UI', sans-serif;
-    font-size: 14px;
+
 }
 
 /* --- Labels transparent by default --- */
@@ -19,9 +19,9 @@ QLabel {
 }
 
 QFrame[panel="true"] {
-    background-color: #1e1e1e;
+    background-color: #252526;
     border-radius: 8px;
-    border: 1px solid #333333;
+    border: 1px solid #3E3E42;
 }
 
 QLabel[class="dashboard-clock"] {
@@ -54,9 +54,9 @@ QScrollArea {
 
 /* --- StatusIndicator Cards --- */
 QFrame[class="status-indicator"] {
-    background-color: #1e1e1e;
+    background-color: #181818;
     border-radius: 8px;
-    border: 2px solid #333333;
+    border: 1px solid #3E3E42;
     padding: 10px 8px 8px 8px;
 }
 
@@ -125,7 +125,7 @@ QLabel[class="status-label"][state="offline"] {
 
 /* --- SentinelPCBox --- */
 QFrame[class="pc-box"] {
-    background-color: #1e1e1e;
+    background-color: #252526;
     border-radius: 6px;
 }
 
@@ -159,7 +159,7 @@ QLabel[class="pc-status"][state="online"] {
 
 /* --- HeartbeatBar --- */
 QFrame[class="heartbeat-bg"] {
-    background-color: #333333;
+    background-color: #3E3E42;
     border-radius: 2px;
 }
 
@@ -170,8 +170,8 @@ QFrame[class="heartbeat-pulse"] {
 
 /* --- Footer --- */
 QFrame[class="dashboard-footer"] {
-    background-color: #1e1e1e;
-    border-top: 1px solid #333333;
+    background-color: #252526;
+    border-top: 1px solid #3E3E42;
     border-radius: 4px;
 }
 
@@ -185,14 +185,14 @@ QScrollBar:vertical, QScrollBar:horizontal {
 }
 
 QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-    background: #2c2c2c;
+    background: #333337;
     min-height: 24px;
     min-width: 24px;
     border-radius: 4px;
 }
 
 QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
-    background: #444444;
+    background: #454548;
 }
 
 QScrollBar::add-line, QScrollBar::sub-line,
