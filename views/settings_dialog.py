@@ -1,9 +1,7 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
                                QWidget, QLabel, QLineEdit, QSpinBox, QDoubleSpinBox,
                                QPushButton, QCheckBox, QMessageBox, QComboBox,
-                               QScrollArea, QFrame, QGroupBox, QGridLayout)
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+                                QFrame, QGroupBox, QGridLayout)
 from models.config_manager import ConfigManager
 from models.app_logger import AppLogger
 
@@ -25,7 +23,6 @@ class SettingsDialog(QDialog):
 
         self.setup_ui()
         self.load_values()
-        self.apply_styles()
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -377,85 +374,3 @@ class SettingsDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
             AppLogger.log(f"SETTINGS: Save failed - {e}")
-
-    def apply_styles(self):
-        """Apply inline styles"""
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #1e1e1e;
-            }
-            #DialogHeader {
-                background-color: #252526;
-                border-bottom: 1px solid #3e3e3e;
-            }
-            #DialogTitle {
-                font-size: 18px;
-                font-weight: bold;
-                color: #00CCFF;
-            }
-            #DialogFooter {
-                background-color: #252526;
-                border-top: 1px solid #3e3e3e;
-            }
-            QGroupBox {
-                font-weight: bold;
-                color: #CCCCCC;
-                border: 1px solid #3e3e3e;
-                border-radius: 5px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px;
-            }
-            QLabel {
-                color: #CCCCCC;
-            }
-            QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
-                background-color: #2d2d30;
-                color: white;
-                border: 1px solid #3e3e3e;
-                border-radius: 3px;
-                padding: 5px;
-            }
-            QCheckBox {
-                color: #CCCCCC;
-            }
-            #PrimaryButton {
-                background-color: #0E639C;
-                color: white;
-                border: none;
-                border-radius: 3px;
-                padding: 8px 20px;
-                font-weight: bold;
-            }
-            #PrimaryButton:hover {
-                background-color: #1177BB;
-            }
-            #SecondaryButton {
-                background-color: #3e3e3e;
-                color: white;
-                border: none;
-                border-radius: 3px;
-                padding: 8px 20px;
-            }
-            #SecondaryButton:hover {
-                background-color: #505050;
-            }
-            QTabWidget::pane {
-                border: 1px solid #3e3e3e;
-                background-color: #1e1e1e;
-            }
-            QTabBar::tab {
-                background-color: #2d2d30;
-                color: #CCCCCC;
-                padding: 8px 20px;
-                border: 1px solid #3e3e3e;
-            }
-            QTabBar::tab:selected {
-                background-color: #1e1e1e;
-                color: #00CCFF;
-            }
-        """)

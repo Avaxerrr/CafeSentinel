@@ -1,21 +1,22 @@
-/* cafesentinel_styles.qss */
+/* ========================================================================
+   SECTION 1: DASHBOARD COMPONENTS
+   ======================================================================== */
 
-/* --- General - Apply dark BG only to main containers --- */
+/* --- General --- */
 QMainWindow, QDialog {
-    background-color: #1E1E1E;  /* WAS: #121212 */
+    background-color: #1E1E1E;
 }
 
 QWidget {
     color: #CCCCCC;
     background-color: #1E1E1E;
     font-family: 'Segoe UI', sans-serif;
-
 }
 
-/* --- Labels transparent by default --- */
+/* --- Labels --- */
 QLabel {
     background: transparent;
-    color: #CCCCCC;
+    /* color inherited from QWidget (#CCCCCC) */
 }
 
 QFrame[panel="true"] {
@@ -25,7 +26,6 @@ QFrame[panel="true"] {
 }
 
 QLabel[class="dashboard-clock"] {
-    background: transparent;
     color: #FFFFFF;
     font-size: 52px;
     font-weight: bold;
@@ -33,15 +33,13 @@ QLabel[class="dashboard-clock"] {
 }
 
 QLabel[class="dashboard-footer-label"] {
-    background: transparent;
     color: #888;
     font-style: italic;
     font-size: 11px;
 }
 
 QLabel[class="dashboard-uptime"] {
-    background: transparent;
-    color: #00FF00;
+    color: #00FF00;  /* STATUS GREEN */
     font-weight: bold;
     font-size: 11px;
     letter-spacing: 0.5px;
@@ -60,21 +58,17 @@ QFrame[class="status-indicator"] {
     padding: 10px 8px 8px 8px;
 }
 
-/* Icon at the top */
 QLabel[class="status-icon"] {
-    background: transparent;
     margin-top: 5px;
-    margin-bottom: 2px;  /* Control spacing between icon and title */
+    margin-bottom: 2px;
 }
 
-/* Title text (ROUTER/SERVER/INTERNET) */
 QLabel[class="status-title"] {
-    background: transparent;
     color: #888;
-    font-weight: 600;  /* Not bold */
+    font-weight: 600;
     font-size: 11px;
     margin-top: 0px;
-    margin-bottom: 8px;  /* Control spacing between title and status */
+    margin-bottom: 8px;
     padding: 0px;
 }
 
@@ -86,7 +80,6 @@ QLabel[class="status-title"][state="offline"] {
     color: #FF4444;
 }
 
-/* Small circle indicator next to status text */
 QLabel[class="status-light"] {
     background-color: #555555;
     border-radius: 6px;
@@ -100,14 +93,11 @@ QLabel[class="status-light"][state="offline"] {
     background-color: #FF4444;
 }
 
-/* Container for status text + circle - make it transparent */
 QWidget[class="status-container"] {
     background: transparent;
 }
 
-/* Status text (ONLINE/OFFLINE) */
 QLabel[class="status-label"] {
-    background: transparent;
     color: #888;
     font-weight: bold;
     font-size: 14px;
@@ -135,7 +125,6 @@ QFrame[class="pc-box"][state="online"] {
 }
 
 QLabel[class="pc-name"] {
-    background: transparent;
     color: #555555;
     font-weight: bold;
     font-size: 14px;
@@ -147,7 +136,6 @@ QLabel[class="pc-name"][state="online"] {
 }
 
 QLabel[class="pc-status"] {
-    background: transparent;
     color: #444444;
     font-size: 10px;
 }
@@ -175,7 +163,7 @@ QFrame[class="dashboard-footer"] {
     border-radius: 4px;
 }
 
-/* --- Sleek, Thin, Modern Dark Scrollbar --- */
+/* --- Scrollbar --- */
 QScrollBar:vertical, QScrollBar:horizontal {
     background: transparent;
     border: none;
@@ -201,4 +189,289 @@ QScrollBar::add-page, QScrollBar::sub-page {
     border: none;
     width: 0;
     height: 0;
+}
+
+/* ========================================================================
+   SECTION 2: BASE WIDGET STYLES
+   ======================================================================== */
+
+/* --- INPUTS --- */
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background-color: #2D2D30;
+    color: #E0E0E0;
+    border: 1px solid #3E3E42;
+    border-radius: 4px;
+    padding: 6px 10px;
+    min-height: 20px;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border: 1px solid #00C853;
+}
+
+QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
+    background-color: #252526;
+    color: #666666;
+    border: 1px solid #333333;
+}
+
+/* --- COMBO BOX --- */
+QComboBox {
+    padding-right: 25px;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 25px;
+    border-left: 1px solid #3E3E42;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+QComboBox::down-arrow {
+    width: 14px;
+    height: 14px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #333337;
+    border: 1px solid #555555;
+    selection-background-color: #00C853;
+    selection-color: #1E1E1E;
+    outline: none;
+}
+
+/* --- SPIN BOXES --- */
+QSpinBox, QDoubleSpinBox {
+    padding-right: 0px;
+}
+
+QSpinBox::up-button, QDoubleSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 20px;
+    background-color: #333337;
+    border-left: 1px solid #3E3E42;
+    border-bottom: 1px solid #3E3E42;
+    border-top-right-radius: 4px;
+}
+
+QSpinBox::down-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 20px;
+    background-color: #333337;
+    border-left: 1px solid #3E3E42;
+    border-bottom-right-radius: 4px;
+}
+
+QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+    background-color: #454548;
+}
+
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    width: 10px;
+    height: 10px;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    width: 10px;
+    height: 10px;
+}
+
+/* --- CHECKBOX --- */
+QCheckBox {
+    spacing: 8px;
+    background-color: transparent;
+    /* color inherited from QWidget */
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border: 1px solid #555555;
+    border-radius: 3px;
+    background-color: #2D2D30;
+}
+
+QCheckBox::indicator:hover {
+    border-color: #00C853;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #00C853;
+    border-color: #00C853;
+}
+
+QCheckBox::indicator:disabled {
+    background-color: #252526;
+    border-color: #3E3E42;
+}
+
+/* --- BUTTONS --- */
+QPushButton {
+    background-color: #333337;
+    color: #E0E0E0;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+QPushButton:hover {
+    background-color: #3E3E42;
+    border: 1px solid #555555;
+}
+
+/* SAFE FIX for Focus Border (No Jitter) */
+QPushButton:focus {
+    outline: none;
+    border: 1px solid transparent; /* Maintains size so button doesn't shrink */
+}
+
+QPushButton:pressed {
+    background-color: #00C853;
+    color: #1E1E1E;
+}
+
+QPushButton:disabled {
+    background-color: #252526;
+    color: #666666;
+    border: 1px solid #333333;
+}
+
+/* Primary Button - Green */
+QPushButton#PrimaryButton {
+    background-color: #00C853;
+    color: #1E1E1E;
+    border: none;
+    font-weight: bold;
+}
+
+QPushButton#PrimaryButton:hover {
+    background-color: #00D75F;
+}
+
+QPushButton#PrimaryButton:pressed {
+    background-color: #00A043;
+}
+
+QPushButton#PrimaryButton:disabled {
+    background-color: #252526;
+    color: #666666;
+}
+
+/* Secondary Button - Gray */
+QPushButton#SecondaryButton {
+    background-color: #3E3E42;
+    color: #E0E0E0;
+    border: 1px solid #555555;
+}
+
+QPushButton#SecondaryButton:hover {
+    background-color: #4F5458;
+    border: 1px solid #777777;
+}
+
+QPushButton#SecondaryButton:pressed {
+    background-color: #555555;
+}
+
+/* --- GROUP BOX --- */
+QGroupBox {
+    background-color: #252526;
+    border: 1px solid #3E3E42;
+    border-radius: 8px;
+    margin-top: 24px;
+    padding-top: 15px;
+    padding-bottom: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-weight: bold;
+    /* color inherited */
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+    left: 10px;
+    color: #00C853;
+    background-color: transparent;
+}
+
+/* --- TAB WIDGET --- */
+QTabWidget::pane {
+    border: 1px solid #3E3E42;
+    background-color: #1E1E1E;
+    border-top: 1px solid #3E3E42;
+}
+
+QTabBar::tab {
+    background-color: #2D2D30;
+    color: #CCCCCC;
+    padding: 10px 20px;
+    border: 1px solid #3E3E42;
+    margin-right: 2px;
+    font-weight: 600;
+}
+
+QTabBar::tab:hover {
+    color: #E0E0E0;
+    background-color: #333337;
+}
+
+QTabBar::tab:selected {
+    background-color: #1E1E1E;
+    color: #00C853;
+    border-bottom: 2px solid #00C853;
+}
+
+/* ========================================================================
+   SECTION 3: DIALOG-SPECIFIC STYLES
+   ======================================================================== */
+
+/* Dialog Header */
+QFrame#DialogHeader {
+    background-color: #252526;
+    border-bottom: 1px solid #3E3E42;
+}
+
+/* Dialog Title */
+QLabel#DialogTitle {
+    font-size: 18px;
+    font-weight: bold;
+    color: #00C853;
+}
+
+/* Dialog Footer */
+QFrame#DialogFooter {
+    background-color: #252526;
+    border-top: 1px solid #3E3E42;
+}
+
+/* ========================================================================
+   SECTION 4: WIZARD-SPECIFIC STYLES
+   ======================================================================== */
+
+/* Wizard Title */
+QLabel[class="wizard-title"] {
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFFFFF;
+}
+
+/* Wizard Instructions */
+QLabel[class="wizard-instructions"] {
+    color: #888;
+    padding: 10px;
+}
+
+/* Wizard Field Labels */
+QLabel[class="field-label"] {
+    font-weight: bold;
+    color: #CCCCCC;
+    margin-bottom: 0px;
 }
