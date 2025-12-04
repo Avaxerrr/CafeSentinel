@@ -9,7 +9,7 @@
         <file alias="net_ok">assets/icons/net_ok.svg</file>
         <file alias="net_bad">assets/icons/net_bad.svg</file>
 
-            <!-- PC Box Icons -->
+        <!-- PC Box Icons -->
         <file alias="pc_on">assets/icons/pc_on.svg</file>
         <file alias="pc_off">assets/icons/pc_off.svg</file>
 
@@ -20,5 +20,10 @@
         <file alias="server_off">assets/icons/server_off.svg</file>
         <file alias="internet_on">assets/icons/internet_on.svg</file>
         <file alias="internet_off">assets/icons/internet_off.svg</file>
+    </qresource>
+
+    <!-- Font -->
+    <qresource prefix="/fonts">
+        <file alias="SUSE-VariableFont_wght.ttf">assets/fonts/SUSE-VariableFont_wght.ttf</file>
     </qresource>
 </RCC>

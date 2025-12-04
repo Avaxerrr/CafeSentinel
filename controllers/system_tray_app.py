@@ -14,6 +14,7 @@ from models.sentinel_worker import SentinelWorker
 from models.app_logger import AppLogger
 from views.settings_dialog import SettingsDialog
 
+
 # --- HELPER FUNCTIONS FOR WATCHDOG ---
 def is_compiled():
     """Check if running as compiled EXE (Nuitka or PyInstaller)."""
@@ -25,6 +26,7 @@ def is_compiled():
     except ImportError:
         return False
 
+
 def process_exists(process_name):
     """Check if a process is running using tasklist."""
     try:
@@ -34,6 +36,7 @@ def process_exists(process_name):
     except Exception as e:
         AppLogger.log(f"ERROR: process_exists check failed for {process_name}: {e}")
         return False
+
 
 def ensure_watchdog_running():
     """Checks if SentinelService is running, if not, launches it."""
@@ -150,13 +153,21 @@ class SystemTrayController(QObject):
             AppLogger.log("⚠️ App will continue without remote config capability")
 
     def setup_menu(self):
+        menu_font = QFont("SUSE", 9)
+        menu_font.setStyleStrategy(QFont.StyleStrategy.PreferQuality | QFont.StyleStrategy.PreferAntialias)
+        menu_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
+        self.menu.setFont(menu_font)
+
         self.action_open = QAction("Open Monitor", self.menu)
         self.action_open.triggered.connect(self.show_window)
         self.menu.addAction(self.action_open)
+
         self.action_settings = QAction("Settings", self.menu)
         self.action_settings.triggered.connect(self.open_settings_dialog)
         self.menu.addAction(self.action_settings)
+
         self.menu.addSeparator()
+
         self.action_quit = QAction("Exit Sentinel", self.menu)
         self.action_quit.triggered.connect(self.verify_quit)
         self.menu.addAction(self.action_quit)
@@ -169,6 +180,7 @@ class SystemTrayController(QObject):
             tray.setIcon(data["icon_ok"] if is_online else data["icon_bad"])
             status = "ONLINE" if is_online else "OFFLINE"
             tray.setToolTip(f"{data['name']}: {status}\nLast Scan: {status_dict['timestamp']}")
+
         update_single("router", status_dict["router"])
         update_single("server", status_dict["server"])
         update_single("internet", status_dict["internet"])
@@ -187,16 +199,23 @@ class SystemTrayController(QObject):
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
+
+        # Background
         bg_color = QColor("#333333")
         painter.setBrush(QBrush(bg_color))
         painter.setPen(Qt.NoPen)
         rect = QRect(0, 0, size, size)
         painter.drawRoundedRect(rect, 15, 15)
+
         text_color = QColor("white")
         painter.setPen(text_color)
         font_size = 32 if number < 100 else 24
-        font = QFont("Segoe UI", font_size)
-        font.setBold(True)
+
+        font = QFont("SUSE", font_size)
+        font.setWeight(QFont.Bold)
+        font.setStyleStrategy(QFont.StyleStrategy.PreferQuality)
+        font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
+
         painter.setFont(font)
         painter.drawText(rect, Qt.AlignCenter, str(number))
         painter.end()

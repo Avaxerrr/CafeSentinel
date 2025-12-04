@@ -10,7 +10,7 @@ QMainWindow, QDialog {
 QWidget {
     color: #CCCCCC;
     background-color: #1E1E1E;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'SUSE', 'Segoe UI', sans-serif;
 }
 
 /* --- Labels --- */
@@ -29,13 +29,13 @@ QLabel[class="dashboard-clock"] {
     color: #FFFFFF;
     font-size: 52px;
     font-weight: bold;
-    font-family: 'Segoe UI', sans-serif;
 }
 
 QLabel[class="dashboard-footer-label"] {
-    color: #888;
-    font-style: italic;
+    color: #00FF00;
+    font-weight: bold;
     font-size: 11px;
+    letter-spacing: 0.5px;
 }
 
 QLabel[class="dashboard-uptime"] {
@@ -494,7 +494,7 @@ QMenu::item {
     padding: 6px 15px 6px 15px;  /* Generous padding for a "touch-friendly" look */
     margin: 2px 6px;             /* Small side margins so highlight floats inside */
     border-radius: 2px;          /* Rounded selection rectangle */
-    font-weight: 500;
+    font-weight: normal;
 }
 
 /* Hover/Selected State - Matches your Brand */

@@ -1,5 +1,7 @@
 import sys
 import ctypes
+
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QApplication, QMessageBox, QDialog
 
 from controllers.system_tray_app import SystemTrayController
@@ -46,6 +48,27 @@ def main():
 
     # 2. Initialize Qt Application
     app = QApplication(sys.argv)
+
+    from PySide6.QtGui import QFontDatabase, QFont
+    import resources_rc  # This imports the compiled QRC
+
+    font_id = QFontDatabase.addApplicationFont(":/fonts/SUSE-VariableFont_wght.ttf")
+
+    if font_id == -1:
+        print("⚠️ WARNING: Failed to load SUSE font from QRC. Falling back to default.")
+    else:
+        families = QFontDatabase.applicationFontFamilies(font_id)
+        print(f"✅ SUSE Font Loaded from QRC: {families}")
+
+        # Apply optimal rendering settings globally
+        app_font = QFont("SUSE", 10)
+        app_font.setStyleStrategy(
+            QFont.StyleStrategy.PreferQuality | QFont.StyleStrategy.PreferAntialias
+        )
+        app_font.setHintingPreference(QFont.HintingPreference.PreferNoHinting)
+        app.setFont(app_font)
+        print("✅ Font rendering optimized (PreferQuality + NoHinting)")
+
     with open("cafesentinel_styles.qss", "r") as f:
         app.setStyleSheet(f.read())
     app.setQuitOnLastWindowClosed(False)
