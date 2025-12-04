@@ -64,6 +64,9 @@ class ConfigManager(QObject):
             "webhook_alerts": "",
             "webhook_occupancy": "",
             "webhook_screenshots": ""
+        },
+        "system_settings": {
+            "env_state": False
         }
     }
 
@@ -78,7 +81,7 @@ class ConfigManager(QObject):
             return
         super().__init__()
         self.config = {}
-        self._config_dirty = False  # ⭐ NEW: Dirty Flag for cross-thread updates
+        self._config_dirty = False
         self._initialized = True
 
         # Resolve paths
@@ -166,7 +169,7 @@ class ConfigManager(QObject):
                 self.config = new_config
 
                 # 4. Set Dirty Flag (for cross-thread polling)
-                self._config_dirty = True  # ⭐ NEW
+                self._config_dirty = True
 
                 # 5. Emit Signal (for same-thread listeners like future GUI)
                 self.sig_config_changed.emit(self.config)

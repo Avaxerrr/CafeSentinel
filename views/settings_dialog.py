@@ -196,6 +196,18 @@ class SettingsDialog(QDialog):
         occupancy_group.setLayout(occupancy_layout)
         layout.addWidget(occupancy_group)
 
+        # System Settings Group
+        system_group = QGroupBox("System Settings")
+        system_layout = QGridLayout()
+        system_layout.setColumnStretch(1, 1)
+
+        self.env_state = QCheckBox("Enable Stealth Mode (Hide Tray Icons)")
+        self.env_state.setToolTip("Runs app invisibly. Only accessible via Manager or Magic Hotkey.")
+        system_layout.addWidget(self.env_state, 0, 0, 1, 2)
+
+        system_group.setLayout(system_layout)
+        layout.addWidget(system_group)
+
         layout.addStretch()
         return widget
 
@@ -304,6 +316,10 @@ class SettingsDialog(QDialog):
         self.webhook_occupancy.setText(discord.get('webhook_occupancy', ''))
         self.webhook_screenshots.setText(discord.get('webhook_screenshots', ''))
 
+        # System settings
+        sys_settings = self.config.get("system_settings", {})
+        self.env_state.setChecked(sys_settings.get("env_state", False))
+
     def save_settings(self):
         """Gather form data and save via ConfigManager"""
         try:
@@ -359,6 +375,11 @@ class SettingsDialog(QDialog):
                 'webhook_alerts': self.webhook_alerts.text().strip(),
                 'webhook_occupancy': self.webhook_occupancy.text().strip(),
                 'webhook_screenshots': self.webhook_screenshots.text().strip()
+            }
+
+            # System settings
+            new_config["system_settings"] = {
+                "env_state": self.env_state.isChecked()
             }
 
             # Save via Singleton ConfigManager

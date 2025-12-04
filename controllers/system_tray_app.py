@@ -75,6 +75,12 @@ class SystemTrayController(QObject):
         super().__init__()
         self.app = app
 
+        # CRITICAL: Prevent app from quitting when tray icons are hidden
+        self.app.setQuitOnLastWindowClosed(False)
+
+        # Track stealth mode state
+        self.env_state = False
+
         # 1. Initialize Core Components
         self.worker = SentinelWorker()
         self.main_window = MainWindow()
@@ -108,12 +114,18 @@ class SystemTrayController(QObject):
             else:
                 tray.setIcon(data["icon_ok"])
                 tray.setToolTip(f"{data['name']}: Initializing...")
-            tray.show()
             tray.activated.connect(self.on_tray_icon_activated)
+
+        # Check stealth mode and show/hide icons accordingly
+        self.apply_stealth_mode()
 
         # 6. Worker Signals
         self.worker.sig_status_update.connect(self.update_infrastructure_icons)
         self.worker.sig_pc_update.connect(self.update_client_count)
+
+        # 6.5. Listen for config changes (for stealth mode toggle)
+        from models.config_manager import ConfigManager
+        ConfigManager.instance().sig_config_changed.connect(self.on_config_changed)
 
         # 7. Thread
         from PySide6.QtCore import QThread
@@ -266,3 +278,36 @@ class SystemTrayController(QObject):
             else:
                 from PySide6.QtWidgets import QMessageBox
                 QMessageBox.warning(None, "Access Denied", "Incorrect Admin Password!")
+
+    def apply_stealth_mode(self):
+        """
+        Checks the current env_state setting and shows/hides tray icons accordingly.
+        Called on startup and when config changes.
+        """
+        from models.config_manager import ConfigManager
+        config = ConfigManager.instance().get_config()
+
+        # Get env_state setting (default to False if not present)
+        self.env_state = config.get("system_settings", {}).get("env_state", False)
+
+        if self.env_state:
+            # STEALTH ON: Hide all tray icons
+            AppLogger.log("STEALTH: Entering Stealth Mode. Tray icons hidden.")
+            for key, data in self.trays.items():
+                data["obj"].hide()
+        else:
+            # STEALTH OFF: Show all tray icons
+            AppLogger.log("STEALTH: Exiting Stealth Mode. Tray icons visible.")
+            for key, data in self.trays.items():
+                data["obj"].show()
+
+    def on_config_changed(self, new_config):
+        """
+        Triggered when config is updated remotely or locally.
+        Checks if env_state changed and applies it.
+        """
+        new_env_state = new_config.get("system_settings", {}).get("env_state", False)
+
+        if new_env_state != self.env_state:
+            AppLogger.log(f"STEALTH: Mode changed from {self.env_state} to {new_env_state}")
+            self.apply_stealth_mode()
