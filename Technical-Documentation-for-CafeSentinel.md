@@ -126,6 +126,14 @@ Application controller that initializes and coordinates all services.
 - Handles password-protected exit via SecurityManager
 - Manages system tray context menu including settings dialog access
 
+**Stealth Mode (Headless Operation):**
+- **Implementation:** Configurable via `env_state` boolean in `system_settings`.
+- **Behavior:**
+  - **Enabled (`True`):** Application runs normally but hides all system tray icons.
+  - **Disabled (`False`):** Standard system tray icons are visible.
+- **Persistence:** App is configured with `setQuitOnLastWindowClosed(False)` to ensure the process continues running even without visible UI elements.
+- **Toggle Mechanism:** Can be toggled remotely via API (Manager App) or locally via Settings Dialog (if accessible). Updates apply immediately via hot-reload.
+
 **System Tray Icons:**
 - Router: green (online) / red (offline)
 - Server: green (online) / red (offline)  
@@ -267,6 +275,9 @@ Configuration stored as encrypted file `cscf.dll` in application directory.
     "webhook_alerts": "",
     "webhook_occupancy": "",
     "webhook_screenshots": ""
+  },
+  "system_settings": {
+    "env_state": false
   }
 }
 ```
@@ -282,7 +293,7 @@ Configuration stored as encrypted file `cscf.dll` in application directory.
 **Local Configuration (via Settings Dialog):**
 - Accessible from system tray context menu
 - Requires admin password for access
-- Three-tab interface: Network, Monitoring, Discord
+- Three-tab interface: Network, Monitoring, Discord, plus **System Settings** checkbox
 - Saves via same ConfigManager.update_config() method as API
 - Changes apply immediately via hot-reload
 
@@ -309,7 +320,7 @@ Configuration changes apply without application restart through two mechanisms:
 **Mechanism 1: Qt Signals (Same-Thread)**
 - ConfigManager emits `sig_config_changed` signal when config updates
 - GUI components connected to this signal update immediately
-- Used for components running in main Qt thread
+- Used for components running in main Qt thread (e.g., SystemTrayController for Stealth Mode updates)
 
 **Mechanism 2: Dirty Flag Polling (Cross-Thread)**
 - Worker thread polls ConfigManager.check_and_clear_dirty() each cycle
