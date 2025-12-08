@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QVBoxLayout, QWidget, QLabel, QLineEdit,
-                               QSpinBox, QDoubleSpinBox, QGroupBox, QGridLayout)
+                               QSpinBox, QDoubleSpinBox, QGridLayout)
 from views.settings_pages.base_page import BaseSettingsPage
+from views.custom_widgets import CardFrame  # <-- NEW IMPORT
 
 class NetworkPage(BaseSettingsPage):
     def __init__(self, parent=None):
@@ -12,8 +13,7 @@ class NetworkPage(BaseSettingsPage):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # --- Targets Group ---
-        targets_group = QGroupBox("Network Targets")
+        # --- Targets Group (Replaced QGroupBox with CardFrame) ---
         targets_layout = QGridLayout()
         targets_layout.setColumnStretch(1, 1)
 
@@ -32,11 +32,11 @@ class NetworkPage(BaseSettingsPage):
         self.internet_ip.setPlaceholderText("8.8.8.8")
         targets_layout.addWidget(self.internet_ip, 2, 1)
 
-        targets_group.setLayout(targets_layout)
-        layout.addWidget(targets_group)
+        # Wrap layout in CardFrame
+        targets_card = CardFrame("Network Targets", targets_layout)
+        layout.addWidget(targets_card)
 
-        # --- Verification Group ---
-        verify_group = QGroupBox("Verification Settings")
+        # --- Verification Group (Replaced QGroupBox with CardFrame) ---
         verify_layout = QGridLayout()
         verify_layout.setColumnStretch(1, 1)
 
@@ -56,8 +56,9 @@ class NetworkPage(BaseSettingsPage):
         self.min_incident.setRange(0, 300)
         verify_layout.addWidget(self.min_incident, 2, 1)
 
-        verify_group.setLayout(verify_layout)
-        layout.addWidget(verify_group)
+        # Wrap layout in CardFrame
+        verify_card = CardFrame("Verification Settings", verify_layout)
+        layout.addWidget(verify_card)
 
         layout.addStretch()
 

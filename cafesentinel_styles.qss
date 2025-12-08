@@ -242,6 +242,13 @@ QComboBox QAbstractItemView {
     outline: none;
 }
 
+/* --- DROPDOWN ARROW --- */
+QComboBox::down-arrow {
+    image: url(:/icons/arrow_down.svg);
+    width: 14px;
+    height: 14px;
+}
+
 /* --- SPIN BOXES --- */
 QSpinBox, QDoubleSpinBox {
     padding-right: 0px;
@@ -281,7 +288,20 @@ QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
     height: 10px;
 }
 
-/* --- CHECKBOX --- */
+/* --- SPINBOX ARROWS --- */
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+    image: url(:/icons/arrow_up.svg);
+    width: 10px;
+    height: 10px;
+}
+
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+    image: url(:/icons/arrow_down.svg);
+    width: 10px;
+    height: 10px;
+}
+
+/* --- CHECKBOX (LEGACY - RETAINED) --- */
 QCheckBox {
     spacing: 8px;
     background-color: transparent;
@@ -379,7 +399,7 @@ QPushButton#SecondaryButton:pressed {
     background-color: #555555;
 }
 
-/* --- GROUP BOX --- */
+/* --- GROUP BOX (LEGACY - RETAINED) --- */
 QGroupBox {
     background-color: #252526;
     border: 1px solid #3E3E42;
@@ -595,4 +615,30 @@ QLabel#DialogTitle {
 QFrame#DialogFooter {
     background-color: #252526; /* Match header/sidebar */
     border-top: 1px solid #2f3136;
+}
+
+/* ========================================================================
+   SECTION 7: NEW MANAGER-STYLE COMPONENTS (CARD & TOGGLE)
+   ======================================================================== */
+
+/* The Card Frame (Container) */
+QFrame#Card {
+    background-color: #252526;
+    border: 0px solid #3E3E42;
+    border-radius: 8px;
+}
+
+/* The Card Title (Inside the Box) */
+QLabel#CardTitle {
+    color: #00C853;
+    font-size: 15px;
+    font-weight: bold;
+    padding-bottom: 5px;
+    background: transparent;
+}
+
+/* Toggle Switch Widget (Custom drawn in Python, no heavy CSS needed here) */
+/* This is just a safety fallback or helper if needed */
+QWidget[class="toggle-switch"] {
+    background: transparent;
 }

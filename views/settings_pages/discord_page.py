@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QVBoxLayout, QWidget, QLabel, QLineEdit,
-                               QGroupBox, QGridLayout, QCheckBox)
+                               QGroupBox, QGridLayout)
 from views.settings_pages.base_page import BaseSettingsPage
+from views.custom_widgets import ToggleSwitch, CardFrame  # <-- NEW IMPORTS
 
 class DiscordPage(BaseSettingsPage):
     def __init__(self, parent=None):
@@ -12,11 +13,12 @@ class DiscordPage(BaseSettingsPage):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        discord_group = QGroupBox("Discord Notifications")
+        # --- Discord Settings Group (CardFrame + ToggleSwitch) ---
         discord_layout = QGridLayout()
         discord_layout.setColumnStretch(1, 1)
 
-        self.discord_enabled = QCheckBox("Enable Discord Notifications")
+        # Updated: ToggleSwitch
+        self.discord_enabled = ToggleSwitch("Enable Discord Notifications")
         discord_layout.addWidget(self.discord_enabled, 0, 0, 1, 2)
 
         discord_layout.addWidget(QLabel("Shop Name:"), 1, 0)
@@ -38,8 +40,9 @@ class DiscordPage(BaseSettingsPage):
         self.webhook_screenshots.setPlaceholderText("https://discord.com/api/webhooks/...")
         discord_layout.addWidget(self.webhook_screenshots, 4, 1)
 
-        discord_group.setLayout(discord_layout)
-        layout.addWidget(discord_group)
+        # Wrap in CardFrame
+        discord_card = CardFrame("Discord Notifications", discord_layout)
+        layout.addWidget(discord_card)
 
         layout.addStretch()
 

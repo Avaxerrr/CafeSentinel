@@ -20,6 +20,10 @@
         <file alias="server_off">assets/icons/server_off.svg</file>
         <file alias="internet_on">assets/icons/internet_on.svg</file>
         <file alias="internet_off">assets/icons/internet_off.svg</file>
+
+        <!-- Arrow for dropdown and spinbox -->
+        <file alias="arrow_up.svg">assets/icons/arrow_up.svg</file>
+        <file alias="arrow_down.svg">assets/icons/arrow_down.svg</file>
     </qresource>
 
     <!-- Font -->

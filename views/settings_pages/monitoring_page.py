@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QVBoxLayout, QWidget, QLabel, QLineEdit,
-                               QSpinBox, QGroupBox, QGridLayout, QCheckBox, QComboBox)
+                               QSpinBox, QGridLayout)
 from views.settings_pages.base_page import BaseSettingsPage
+from views.custom_widgets import ToggleSwitch, CardFrame
 
 class MonitoringPage(BaseSettingsPage):
     def __init__(self, parent=None):
@@ -12,8 +13,7 @@ class MonitoringPage(BaseSettingsPage):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # --- Monitor Group ---
-        monitor_group = QGroupBox("Scan Settings")
+        # --- Monitor Group (CardFrame) ---
         monitor_layout = QGridLayout()
         monitor_layout.setColumnStretch(1, 1)
 
@@ -37,15 +37,16 @@ class MonitoringPage(BaseSettingsPage):
         self.pc_count.setRange(1, 100)
         monitor_layout.addWidget(self.pc_count, 3, 1)
 
-        monitor_group.setLayout(monitor_layout)
-        layout.addWidget(monitor_group)
+        # Wrap in CardFrame
+        monitor_card = CardFrame("Scan Settings", monitor_layout)
+        layout.addWidget(monitor_card)
 
-        # --- Screenshot Group ---
-        screenshot_group = QGroupBox("Screenshots")
+        # --- Screenshot Group (CardFrame + ToggleSwitch) ---
         screenshot_layout = QGridLayout()
         screenshot_layout.setColumnStretch(1, 1)
 
-        self.screenshot_enabled = QCheckBox("Enable Screenshots")
+        # Updated: ToggleSwitch
+        self.screenshot_enabled = ToggleSwitch("Enable Screenshots")
         screenshot_layout.addWidget(self.screenshot_enabled, 0, 0, 1, 2)
 
         screenshot_layout.addWidget(QLabel("Interval (min):"), 1, 0)
@@ -56,25 +57,30 @@ class MonitoringPage(BaseSettingsPage):
         screenshot_layout.addWidget(QLabel("Quality:"), 2, 0)
         self.screenshot_quality = QSpinBox()
         self.screenshot_quality.setRange(10, 100)
+        self.screenshot_quality.setSuffix("%")
         screenshot_layout.addWidget(self.screenshot_quality, 2, 1)
 
-        screenshot_layout.addWidget(QLabel("Resize Ratio:"), 3, 0)
-        self.resize_ratio = QComboBox()
-        self.resize_ratio.addItems(["100%", "75%", "50%"])
+        screenshot_layout.addWidget(QLabel("Resize Ratio (%):"), 3, 0)
+        self.resize_ratio = QSpinBox()
+        self.resize_ratio.setRange(10, 100)
+        self.resize_ratio.setSingleStep(5)
+        self.resize_ratio.setSuffix("%")
         screenshot_layout.addWidget(self.resize_ratio, 3, 1)
 
-        screenshot_group.setLayout(screenshot_layout)
-        layout.addWidget(screenshot_group)
+        # Wrap in CardFrame
+        screenshot_card = CardFrame("Screenshots", screenshot_layout)
+        layout.addWidget(screenshot_card)
 
-        # --- Occupancy Group ---
-        occupancy_group = QGroupBox("Occupancy Tracking")
+        # --- Occupancy Group (CardFrame + ToggleSwitch) ---
         occupancy_layout = QGridLayout()
         occupancy_layout.setColumnStretch(1, 1)
 
-        self.occupancy_enabled = QCheckBox("Enable Tracking")
+        # Updated: ToggleSwitch
+        self.occupancy_enabled = ToggleSwitch("Enable Tracking")
         occupancy_layout.addWidget(self.occupancy_enabled, 0, 0, 1, 2)
 
-        self.hourly_snapshot = QCheckBox("Hourly Snapshots")
+        # Updated: ToggleSwitch
+        self.hourly_snapshot = ToggleSwitch("Hourly Snapshots")
         occupancy_layout.addWidget(self.hourly_snapshot, 1, 0, 1, 2)
 
         occupancy_layout.addWidget(QLabel("Min Session (min):"), 2, 0)
@@ -87,20 +93,22 @@ class MonitoringPage(BaseSettingsPage):
         self.batch_delay.setRange(1, 300)
         occupancy_layout.addWidget(self.batch_delay, 3, 1)
 
-        occupancy_group.setLayout(occupancy_layout)
-        layout.addWidget(occupancy_group)
+        # Wrap in CardFrame
+        occupancy_card = CardFrame("Occupancy Tracking", occupancy_layout)
+        layout.addWidget(occupancy_card)
 
-        # --- System Settings Group ---
-        system_group = QGroupBox("System Settings")
+        # --- System Settings Group (CardFrame + ToggleSwitch) ---
         system_layout = QGridLayout()
         system_layout.setColumnStretch(1, 1)
 
-        self.env_state = QCheckBox("Enable Stealth Mode (Hide Tray Icons)")
+        # Updated: ToggleSwitch
+        self.env_state = ToggleSwitch("Enable Stealth Mode (Hide Tray Icons)")
         self.env_state.setToolTip("Runs app invisibly. Only accessible via Manager or Magic Hotkey.")
         system_layout.addWidget(self.env_state, 0, 0, 1, 2)
 
-        system_group.setLayout(system_layout)
-        layout.addWidget(system_group)
+        # Wrap in CardFrame
+        system_card = CardFrame("System Settings", system_layout)
+        layout.addWidget(system_card)
 
         layout.addStretch()
 
@@ -118,11 +126,9 @@ class MonitoringPage(BaseSettingsPage):
         self.screenshot_interval.setValue(screenshot.get('interval_minutes', 60))
         self.screenshot_quality.setValue(screenshot.get('quality', 80))
 
-        # Convert float ratio (0.75) to string ("75%")
+        # Config has 0.75 -> Convert to 75
         ratio_val = int(screenshot.get('resize_ratio', 1.0) * 100)
-        idx = self.resize_ratio.findText(f"{ratio_val}%")
-        if idx >= 0:
-            self.resize_ratio.setCurrentIndex(idx)
+        self.resize_ratio.setValue(ratio_val)
 
         # 3. Occupancy Settings
         occupancy = full_config.get('occupancy_settings', {})
@@ -136,9 +142,8 @@ class MonitoringPage(BaseSettingsPage):
         self.env_state.setChecked(sys_settings.get("env_state", False))
 
     def get_data(self) -> dict:
-        # Logic for Resize Ratio: "75%" -> 0.75
-        ratio_text = self.resize_ratio.currentText().replace('%', '')
-        ratio_float = float(ratio_text) / 100.0
+        # User enters 75 -> Return 0.75
+        ratio_float = self.resize_ratio.value() / 100.0
 
         return {
             'monitor_settings': {
@@ -166,9 +171,7 @@ class MonitoringPage(BaseSettingsPage):
         }
 
     def validate(self) -> tuple[bool, str]:
-        # Validate Subnet format (simple check)
         subnet = self.pc_subnet.text().strip()
         if not subnet:
             return False, "PC Subnet cannot be empty."
-        # Additional validation logic can go here
         return True, ""
