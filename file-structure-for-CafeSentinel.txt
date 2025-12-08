@@ -1,5 +1,11 @@
 CafeSentinel/
 +--- assets
+|    +--- fonts
+|    |    +--- Inter_28pt-Regular.ttf
+|    |    +--- SUSE-Medium.ttf
+|    |    +--- SUSE-Regular.ttf
+|    |    \--- SUSE-VariableFont_wght.ttf
+|    |    
 |    +--- icons
 |         +--- internet_off.svg
 |         +--- internet_on.svg
@@ -10,9 +16,9 @@ CafeSentinel/
 |         +--- router_bad.svg
 |         +--- router_off.svg
 |         +--- router_ok.svg
-|        +--- router_on.svg
+|         +--- router_on.svg
 |         +--- server_bad.svg
-|        +--- server_off.svg
+|         +--- server_off.svg
 |         +--- server_ok.svg
 |         \--- server_on.svg
 |    
@@ -40,6 +46,13 @@ CafeSentinel/
 |    \--- resource_manager.py
 |    
 +--- views
+|    +--- settings_pages
+|    |    +--- __init__.py
+|    |    +--- base_page.py
+|    |    +--- discord_page.py
+|    |    +--- monitoring_page.py
+|    |    \--- network_page.py
+|    |    
 |    +--- __init__.py
 |    +--- custom_widgets.py
 |    +--- main_window.py
