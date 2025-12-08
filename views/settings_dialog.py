@@ -1,9 +1,18 @@
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
-                               QFrame, QLabel, QPushButton, QMessageBox)
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QListWidget,
+                               QStackedWidget, QFrame, QLabel, QPushButton,
+                               QMessageBox, QListWidgetItem, QScrollArea, QWidget)
+from PySide6.QtGui import QIcon
+from PySide6.QtCore import QSize, Qt
 from models.config_manager import ConfigManager
 from models.app_logger import AppLogger
 
-# Import the new modular pages
+# Try to import resources, pass if fails
+try:
+    import resources_rc
+except ImportError:
+    pass
+
+# Import the modular pages
 from views.settings_pages.network_page import NetworkPage
 from views.settings_pages.monitoring_page import MonitoringPage
 from views.settings_pages.discord_page import DiscordPage
@@ -11,7 +20,7 @@ from views.settings_pages.discord_page import DiscordPage
 class SettingsDialog(QDialog):
     """
     Local settings configuration dialog.
-    Refactored to use modular page architecture.
+    Features: Sidebar Navigation, Scrollable Content, External CSS support.
     """
 
     def __init__(self, parent=None):
@@ -21,49 +30,96 @@ class SettingsDialog(QDialog):
 
         self.setWindowTitle("CafeSentinel - Settings")
         self.setModal(True)
-        self.setMinimumSize(900, 700)
+        self.setMinimumSize(800, 400)
 
         self.setup_ui()
         self.load_values()
 
     def setup_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        # Main Layout (Vertical: Header -> Body -> Footer)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        # Header
-        header = self.create_header()
-        layout.addWidget(header)
+        # 1. Header
+        main_layout.addWidget(self.create_header())
 
-        # Tabs - Now just containers for our modular pages
-        self.tabs = QTabWidget()
+        # 2. Body (Horizontal: Sidebar | Content)
+        body_frame = QFrame()
+        body_frame.setObjectName("SettingsBodyFrame")
+        body_layout = QHBoxLayout(body_frame)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(0)
 
-        # Instantiate the pages
+        # --- Left Sidebar ---
+        self.sidebar = QListWidget()
+        self.sidebar.setObjectName("SettingsSidebar")
+        self.sidebar.setFixedWidth(200)
+        self.sidebar.setFrameShape(QFrame.NoFrame)
+        self.sidebar.setIconSize(QSize(24, 24))
+        self.sidebar.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # Add Navigation Items
+        self.add_nav_item("Network", ":/icons/router_on")
+        self.add_nav_item("Monitoring", ":/icons/pc_on")
+        self.add_nav_item("Discord", ":/icons/server_on")
+
+        # --- Right Content Stack ---
+        self.pages_stack = QStackedWidget()
+        self.pages_stack.setObjectName("SettingsContentStack")
+
+        # Instantiate Pages
         self.network_page = NetworkPage()
         self.monitoring_page = MonitoringPage()
         self.discord_page = DiscordPage()
 
-        # Add them to tabs
-        self.tabs.addTab(self.network_page, "Network")
-        self.tabs.addTab(self.monitoring_page, "Monitoring")
-        self.tabs.addTab(self.discord_page, "Discord")
+        # Add pages wrapped in ScrollAreas
+        self.pages_stack.addWidget(self.create_scroll_wrapper(self.network_page))
+        self.pages_stack.addWidget(self.create_scroll_wrapper(self.monitoring_page))
+        self.pages_stack.addWidget(self.create_scroll_wrapper(self.discord_page))
 
-        layout.addWidget(self.tabs)
+        # Wiring: Sidebar Click -> Switch Page
+        self.sidebar.currentRowChanged.connect(self.pages_stack.setCurrentIndex)
 
-        # Footer
-        footer = self.create_footer()
-        layout.addWidget(footer)
+        # Add to Body Layout
+        body_layout.addWidget(self.sidebar)
+        body_layout.addWidget(self.pages_stack)
+
+        main_layout.addWidget(body_frame)
+
+        # 3. Footer
+        main_layout.addWidget(self.create_footer())
+
+        # Select first item by default
+        self.sidebar.setCurrentRow(0)
+
+    def create_scroll_wrapper(self, widget: QWidget) -> QScrollArea:
+        """Wraps a settings page in a QScrollArea to prevent cramping."""
+        scroll = QScrollArea()
+        scroll.setObjectName("SettingsScrollArea")
+        scroll.setWidget(widget)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+
+        return scroll
+
+    def add_nav_item(self, name, icon_path):
+        item = QListWidgetItem(name)
+        icon = QIcon(icon_path)
+        if not icon.isNull():
+            item.setIcon(icon)
+        self.sidebar.addItem(item)
 
     def create_header(self):
         header = QFrame()
         header.setObjectName("DialogHeader")
         layout = QHBoxLayout(header)
-        layout.setContentsMargins(20, 15, 20, 15)
+        layout.setContentsMargins(25, 20, 25, 20)
 
         title = QLabel("Configuration Settings")
         title.setObjectName("DialogTitle")
         layout.addWidget(title)
         layout.addStretch()
-
         return header
 
     def create_footer(self):
@@ -88,7 +144,6 @@ class SettingsDialog(QDialog):
 
     def load_values(self):
         """Distribute config data to child pages"""
-        # Each page knows how to extract what it needs from the full config
         self.network_page.load_data(self.config)
         self.monitoring_page.load_data(self.config)
         self.discord_page.load_data(self.config)
@@ -97,7 +152,6 @@ class SettingsDialog(QDialog):
         """Gather data from all pages, validate, and save"""
         try:
             # 1. Validation Phase
-            # We check all pages before saving anything
             pages = [
                 (self.network_page, "Network"),
                 (self.monitoring_page, "Monitoring"),
@@ -107,15 +161,13 @@ class SettingsDialog(QDialog):
             for page, name in pages:
                 is_valid, error = page.validate()
                 if not is_valid:
-                    QMessageBox.warning(self, "Validation Error", f"Error in {name} tab:\n{error}")
+                    idx = pages.index((page, name))
+                    self.sidebar.setCurrentRow(idx)
+                    QMessageBox.warning(self, "Validation Error", f"Error in {name} settings:\n{error}")
                     return
 
             # 2. Collection Phase
-            # Start with a copy of the old config to preserve any hidden keys
             new_config = self.config.copy()
-
-            # Merge in updates from each page
-            # Note: update() is a dictionary method that merges keys
             new_config.update(self.network_page.get_data())
             new_config.update(self.monitoring_page.get_data())
             new_config.update(self.discord_page.get_data())

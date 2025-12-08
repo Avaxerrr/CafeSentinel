@@ -520,3 +520,79 @@ QMenu::item:disabled {
 QMenu::icon {
     padding-left: 15px;
 }
+
+/* ========================================================================
+   SECTION 6: SETTINGS DIALOG REVAMP (SIDEBAR LAYOUT)
+   ======================================================================== */
+
+/* 1. The Sidebar Container */
+QListWidget#SettingsSidebar {
+    background-color: #252526;  /* Darker gray column */
+    color: #b9bbbe;             /* Muted text color */
+    border-right: 1px solid #2f3136;
+    outline: none;              /* Remove dotted focus line */
+    padding-top: 10px;
+}
+
+/* 2. The Sidebar Items */
+QListWidget#SettingsSidebar::item {
+    height: 45px;               /* Tall, clickable rows */
+    padding-left: 15px;
+    margin: 2px 10px;           /* Small gap on sides */
+    border-radius: 4px;         /* Soft rounded corners */
+    border: none;
+}
+
+/* Hover State */
+QListWidget#SettingsSidebar::item:hover {
+    background-color: #2f3136;  /* Slightly lighter gray */
+    color: #dcddde;             /* Brighter text */
+}
+
+/* Selected State (Active Page) */
+QListWidget#SettingsSidebar::item:selected {
+    background-color: #3f4148;  /* distinct active background */
+    color: #FFFFFF;             /* Pure white text */
+    /* Note: We use a left-border trick for the 'green bar' usually,
+       but rounded corners look more modern here. */
+    border-left: 4px solid #00C853; /* The Green Accent */
+}
+
+/* 3. The Right-Side Content Area */
+QFrame#SettingsBodyFrame {
+    background-color: #1E1E1E;  /* Matches Main Window Background */
+}
+
+QStackedWidget#SettingsContentStack {
+    background-color: #1E1E1E;
+    padding: 0px;
+}
+
+/* 4. The Scroll Area (Invisible Wrapper) */
+QScrollArea#SettingsScrollArea {
+    background-color: transparent;
+    border: none;
+}
+QScrollArea#SettingsScrollArea > QWidget > QWidget {
+    background-color: transparent; /* Ensure inner widget is transparent */
+}
+
+/* 5. Dialog Header Polish */
+QFrame#DialogHeader {
+    background-color: #252526; /* Match sidebar for a full-width header feel */
+    border-bottom: 1px solid #2f3136;
+}
+
+QLabel#DialogTitle {
+    color: #00C853;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    padding-left: 10px;
+}
+
+/* 6. Dialog Footer Polish */
+QFrame#DialogFooter {
+    background-color: #252526; /* Match header/sidebar */
+    border-top: 1px solid #2f3136;
+}
