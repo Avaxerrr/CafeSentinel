@@ -97,7 +97,7 @@ def run_watchdog():
                 # Since we can't get exit code in attach mode, we check for the Vault file.
                 # If no vault exists, assume it was a Setup Cancel -> Do not restart.
                 base_dir = os.path.dirname(target_path)
-                vault_path = os.path.join(base_dir, "cron.dll") # Security Vault
+                vault_path = os.path.join(base_dir, "cron.dll")
 
                 if not os.path.exists(vault_path):
                     print(f"[{time.strftime('%H:%M:%S')}] 🛑 No Vault found. Assuming Setup Cancelled. Exiting.")
@@ -116,6 +116,7 @@ def run_watchdog():
 
             exit_code = p.wait()
 
+            # --- UPDATED LOGGING LOGIC ---
             if exit_code == 0:
                 print(f"\n[{time.strftime('%H:%M:%S')}] ✅ CLEAN EXIT (Code 0)")
                 break
@@ -124,7 +125,9 @@ def run_watchdog():
                 break
             else:
                 print(f"\n[{time.strftime('%H:%M:%S')}] ⚠️  ABNORMAL EXIT (Code {exit_code})")
+                # Add extra delay to prevent CPU thrashing on repeated crash
                 time.sleep(2)
+            # -----------------------------
 
         except Exception as e:
             print(f"\n❌ WATCHDOG ERROR: {e}")
@@ -135,7 +138,7 @@ def main():
     if not is_admin():
         try:
             ctypes.windll.shell32.ShellExecuteW(
-                None, "runas", sys.executable, " ".join(sys.argv), None, 1
+                None, "runas", sys.executable, " \".join(sys.argv)", None, 1
             )
         except:
             pass

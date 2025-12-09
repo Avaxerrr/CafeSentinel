@@ -10,6 +10,22 @@ CORS(app)
 
 cfg_mgr = ConfigManager.instance()
 
+# ============= LOGGING MIDDLEWARE =============
+
+@app.before_request
+def log_request_info():
+    # Only log state-changing methods to avoid spamming read logs
+    if request.method in ['POST', 'PUT', 'DELETE']:
+        AppLogger.log(f"API Request: {request.method} {request.path} from {request.remote_addr}", category="SYSTEM")
+
+@app.after_request
+def log_response_info(response):
+    # Log errors or significant state changes
+    log_category = "SYSTEM"
+    if response.status_code >= 400:
+        log_category = "ERROR"
+        AppLogger.log(f"API {request.method} {request.path} - Status: {response.status_code} {response.status}", category=log_category)
+    return response
 
 # ============= API ENDPOINTS =============
 

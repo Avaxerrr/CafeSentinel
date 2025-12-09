@@ -1,17 +1,17 @@
 import json
 import time
 import os
+import threading
 from datetime import datetime
 from PySide6.QtCore import QObject, Signal, Slot
 
-# PRESERVED YOUR EXACT IMPORTS
 from models.network_tools import NetworkTools
 from models.event_logger import EventLogger
 from models.discord_notifier import DiscordNotifier
 from models.screen_capture import ScreenCapture
 from models.app_logger import AppLogger
 from models.session_manager import SessionManager
-from models.config_manager import ConfigManager  # SINGLETON IMPORT
+from models.config_manager import ConfigManager
 
 
 class SentinelWorker(QObject):
@@ -63,9 +63,7 @@ class SentinelWorker(QObject):
         # Update Modules
         self.notifier.update_config(self.config)
         self.session_manager.update_config(self.config)
-        self.camera = ScreenCapture(self.config)  # Re-init camera
-
-        # Update Locals
+        self.camera = ScreenCapture(self.config)
         self._update_settings()
         self.pc_list = self.generate_pc_list()
 
@@ -108,9 +106,19 @@ class SentinelWorker(QObject):
             self.last_screenshot_time = now
             AppLogger.log(f"Capturing Routine Screenshot ({self.screenshot_interval}m)", category="TASK")
 
+            # Capture happens in Main Thread (Fast, <100ms)
             img_data, _ = self.camera.capture_to_memory()
+
             if img_data:
-                self.notifier.send_routine_screenshot(img_data)
+                # Upload happens in Background Thread (Slow, 2-5s)
+                # Thread name helps debugging
+                upload_thread = threading.Thread(
+                    target=self.notifier.send_routine_screenshot,
+                    args=(img_data,),
+                    name="UploadWorker_Routine"
+                )
+                upload_thread.daemon = True  # Kills thread if app closes
+                upload_thread.start()
 
     def _verify_component(self, target_ip, component_type):
         # 1. Wait Buffer
@@ -121,8 +129,17 @@ class SentinelWorker(QObject):
             results = NetworkTools.scan_hosts([target_ip, self.secondary_dns])
             primary_ok = target_ip in results
             secondary_ok = self.secondary_dns in results
+
             if not primary_ok and not secondary_ok:
+                AppLogger.log(
+                    f"Verification FAILED: Primary({target_ip}) & Secondary({self.secondary_dns}) both unreachable.",
+                    category="NETWORK")
                 return True
+            elif not primary_ok and secondary_ok:
+                AppLogger.log(
+                    f"Verification WARN: Primary({target_ip}) failed but Secondary({self.secondary_dns}) is UP. Ignoring.",
+                    category="NETWORK")
+                return False
             else:
                 return False
         else:
@@ -152,10 +169,16 @@ class SentinelWorker(QObject):
             EventLogger.log_resolution(down_start_time, now, f"{name}_DOWN")
 
             img_data, _ = self.camera.capture_to_memory()
-            self.notifier.send_outage_report(
-                duration_str, f"{name}_DOWN", self.current_client_count,
-                down_start_time, now, screenshot_data=img_data
+
+            # Use threading for incident report uploads too
+            upload_thread = threading.Thread(
+                target=self.notifier.send_outage_report,
+                args=(duration_str, f"{name}_DOWN", self.current_client_count, down_start_time, now, img_data),
+                name="UploadWorker_Incident"
             )
+            upload_thread.daemon = True
+            upload_thread.start()
+
             return None
         return down_start_time
 
@@ -174,7 +197,7 @@ class SentinelWorker(QObject):
                     new_config = self.cfg_mgr.get_config()
                     self.on_config_updated(new_config)
 
-                # 1. Get Targets (Clean, no hardcoding)
+                # 1. Get Targets
                 targets = self.config.get('targets', {})
                 router_ip = targets.get('router')
                 server_ip = targets.get('server')
@@ -229,7 +252,7 @@ class SentinelWorker(QObject):
                 if router_ok:
                     self.isp_down_start = self._process_component("ISP", internet_ok, self.isp_down_start)
 
-                # 6. Update GUI -- emit new dict
+                # 6. Update GUI
                 status_dict = {
                     "timestamp": timestamp,
                     "router": router_ok,
@@ -244,7 +267,12 @@ class SentinelWorker(QObject):
             except Exception as e:
                 AppLogger.log(f"Exception: {e}", category="ERROR")
 
+            # Check for Slow Loops
             elapsed = time.time() - loop_start
             interval = self.config.get('monitor_settings', {}).get('interval_seconds', 2)
+
+            if elapsed > (interval + 1.0):
+                AppLogger.log(f"Slow Scan Loop Detected: {elapsed:.2f}s (Target: {interval}s)", category="SYSTEM")
+
             sleep_time = max(0.1, interval - elapsed)
             time.sleep(sleep_time)
