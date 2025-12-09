@@ -92,6 +92,7 @@ class NestedBuilder:
             "--output-dir=build_temp",
             "--include-module=flask",
             "--include-module=flask_cors",
+            "--include-module=requests",
             "interface.py"
         ]
 
@@ -143,8 +144,19 @@ class NestedBuilder:
             (main_dest / "interface.exe").rename(main_dest / "CafeSentinel.exe")
 
             print("Copying resources...")
-            shutil.copy2(self.project_root / "config.json", main_dest / "config.json")
 
+            # --- FIX 1: Copy the Stylesheet (CRITICAL) ---
+            style_file = self.project_root / "cafesentinel_styles.qss"
+            if style_file.exists():
+                shutil.copy2(style_file, main_dest / "cafesentinel_styles.qss")
+                print("Included cafesentinel_styles.qss")
+            else:
+                print("WARNING: cafesentinel_styles.qss NOT FOUND. App may crash!")
+
+            # --- FIX 2: Do NOT copy config.json (Let app create cscf.dll) ---
+            # shutil.copy2(self.project_root / "config.json", main_dest / "config.json")
+
+            # Copy Icon if it exists (for external use/shortcuts)
             if (self.project_root / "icon.svg").exists():
                 shutil.copy2(self.project_root / "icon.svg", main_dest / "icon.svg")
 

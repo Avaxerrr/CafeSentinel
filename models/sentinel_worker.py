@@ -106,19 +106,20 @@ class SentinelWorker(QObject):
             self.last_screenshot_time = now
             AppLogger.log(f"Capturing Routine Screenshot ({self.screenshot_interval}m)", category="TASK")
 
-            # Capture happens in Main Thread (Fast, <100ms)
+            # Capture happens in Main Thread (Fast)
             img_data, _ = self.camera.capture_to_memory()
 
             if img_data:
-                # Upload happens in Background Thread (Slow, 2-5s)
-                # Thread name helps debugging
+                # Upload happens in Background Thread (Slow)
                 upload_thread = threading.Thread(
                     target=self.notifier.send_routine_screenshot,
                     args=(img_data,),
                     name="UploadWorker_Routine"
                 )
-                upload_thread.daemon = True  # Kills thread if app closes
+                upload_thread.daemon = True
                 upload_thread.start()
+            else:
+                AppLogger.log("Screenshot Capture Failed: No image data returned (Monitor off?)", category="ERROR")
 
     def _verify_component(self, target_ip, component_type):
         # 1. Wait Buffer
@@ -133,12 +134,14 @@ class SentinelWorker(QObject):
             if not primary_ok and not secondary_ok:
                 AppLogger.log(
                     f"Verification FAILED: Primary({target_ip}) & Secondary({self.secondary_dns}) both unreachable.",
-                    category="NETWORK")
+                    category="NETWORK"
+                )
                 return True
             elif not primary_ok and secondary_ok:
                 AppLogger.log(
                     f"Verification WARN: Primary({target_ip}) failed but Secondary({self.secondary_dns}) is UP. Ignoring.",
-                    category="NETWORK")
+                    category="NETWORK"
+                )
                 return False
             else:
                 return False
@@ -159,9 +162,12 @@ class SentinelWorker(QObject):
             duration_seconds = duration.total_seconds()
             duration_str = str(duration).split('.')[0]
 
-            # Hysteresis Check
+            # Hysteresis Check (Jitter Logging)
             if duration_seconds < self.min_incident_duration:
-                AppLogger.log(f"{name} glitch detected ({duration_seconds:.1f}s) - Suppressed.", category="NETWORK")
+                AppLogger.log(
+                    f"{name} jitter detected ({duration_seconds:.1f}s) - Below threshold ({self.min_incident_duration}s).",
+                    category="NETWORK"
+                )
                 return None
 
             # Real incident recovery
@@ -170,7 +176,9 @@ class SentinelWorker(QObject):
 
             img_data, _ = self.camera.capture_to_memory()
 
-            # Use threading for incident report uploads too
+            if not img_data:
+                AppLogger.log("Incident Screenshot Failed: No image data returned", category="ERROR")
+
             upload_thread = threading.Thread(
                 target=self.notifier.send_outage_report,
                 args=(duration_str, f"{name}_DOWN", self.current_client_count, down_start_time, now, img_data),
@@ -184,6 +192,14 @@ class SentinelWorker(QObject):
 
     def start_monitoring(self):
         AppLogger.log("Monitoring Active", category="DAEMON")
+
+        # Startup configuration snapshot
+        try:
+            interval = self.config.get('monitor_settings', {}).get('interval_seconds', 2)
+            pc_count = len(self.pc_list)
+            AppLogger.log(f"Settings Loaded: Interval={interval}s, Targets={pc_count} PCs", category="SYSTEM")
+        except Exception:
+            pass
 
         while self.running:
             loop_start = time.time()
@@ -217,16 +233,19 @@ class SentinelWorker(QObject):
 
                 # 3. Verification
                 if not router_ok:
-                    if not self._verify_component(router_ip, "ROUTER"): router_ok = True
+                    if not self._verify_component(router_ip, "ROUTER"):
+                        router_ok = True
                 if not server_ok:
-                    if not self._verify_component(server_ip, "SERVER"): server_ok = True
+                    if not self._verify_component(server_ip, "SERVER"):
+                        server_ok = True
 
                 internet_ok = False
                 if not router_ok:
                     internet_ok = False  # Cascade
                 else:
                     if not internet_raw_ok:
-                        if not self._verify_component(internet_ip, "INTERNET"): internet_ok = True
+                        if not self._verify_component(internet_ip, "INTERNET"):
+                            internet_ok = True
                     else:
                         internet_ok = True
 
@@ -238,7 +257,9 @@ class SentinelWorker(QObject):
                     gui_client_data = []
                     for i, ip in enumerate(self.pc_list):
                         is_alive = ip in online_clients
-                        gui_client_data.append({"name": f"PC-{i + 1}", "ip": ip, "is_alive": is_alive})
+                        gui_client_data.append(
+                            {"name": f"PC-{i + 1}", "ip": ip, "is_alive": is_alive}
+                        )
                     self.sig_pc_update.emit(gui_client_data)
 
                     self.session_manager.process_scan(online_clients, self.pc_list)
@@ -272,7 +293,10 @@ class SentinelWorker(QObject):
             interval = self.config.get('monitor_settings', {}).get('interval_seconds', 2)
 
             if elapsed > (interval + 1.0):
-                AppLogger.log(f"Slow Scan Loop Detected: {elapsed:.2f}s (Target: {interval}s)", category="SYSTEM")
+                AppLogger.log(
+                    f"Slow Scan Loop Detected: {elapsed:.2f}s (Target: {interval}s)",
+                    category="SYSTEM"
+                )
 
             sleep_time = max(0.1, interval - elapsed)
             time.sleep(sleep_time)

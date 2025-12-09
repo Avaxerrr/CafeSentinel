@@ -6,6 +6,7 @@ import sys
 import time
 import os
 import ctypes
+from datetime import datetime
 
 # ==============================================================================
 # --- CONFIG ---
@@ -66,6 +67,26 @@ def process_exists(process_name):
         return False
 
 
+def log_watchdog_event(message: str):
+    """
+    Lightweight raw append logger for watchdog events.
+    Writes to the same info.log used by CafeSentinel, but without importing AppLogger.
+    """
+    try:
+        target_path = get_target_path()
+        base_dir = os.path.dirname(target_path)
+        log_path = os.path.join(base_dir, "info.log")
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        line = f"[{timestamp}] [WATCHDOG] {message}\n"
+
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception:
+        # Watchdog must never crash because of logging
+        pass
+
+
 def run_watchdog():
     """Main watchdog loop."""
     target_path = get_target_path()
@@ -97,17 +118,20 @@ def run_watchdog():
                 # Since we can't get exit code in attach mode, we check for the Vault file.
                 # If no vault exists, assume it was a Setup Cancel -> Do not restart.
                 base_dir = os.path.dirname(target_path)
-                vault_path = os.path.join(base_dir, "cron.dll")
+                vault_path = os.path.join(base_dir, "cron.dll")  # Security Vault
 
                 if not os.path.exists(vault_path):
                     print(f"[{time.strftime('%H:%M:%S')}] 🛑 No Vault found. Assuming Setup Cancelled. Exiting.")
+                    log_watchdog_event("Vault missing after target exit. Assuming setup cancelled. Stopping watchdog.")
                     break
 
                 print("🔄 Restarting...")
+                log_watchdog_event("Target process disappeared unexpectedly. Restarting from attach mode.")
                 # Loop continues to spawn logic below
 
             # 2. Start Process (Spawn Mode)
             print(f"[{time.strftime('%H:%M:%S')}] 🚀 Starting {target_name}...")
+            log_watchdog_event("Starting CafeSentinel process (spawn mode).")
 
             if is_compiled():
                 p = subprocess.Popen([target_path])
@@ -116,21 +140,25 @@ def run_watchdog():
 
             exit_code = p.wait()
 
-            # --- UPDATED LOGGING LOGIC ---
+            # Interpret exit code
             if exit_code == 0:
                 print(f"\n[{time.strftime('%H:%M:%S')}] ✅ CLEAN EXIT (Code 0)")
+                log_watchdog_event("CafeSentinel exited cleanly (Code 0). Stopping watchdog.")
+                # Clean, intentional exit (via password) -> Do NOT restart, stop watchdog
                 break
             elif exit_code == 100:
                 print(f"\n[{time.strftime('%H:%M:%S')}] 🛑 SETUP CANCELLED (Code 100) - Stopping Watchdog.")
+                log_watchdog_event("Setup cancelled by user (Code 100). Stopping watchdog.")
                 break
             else:
                 print(f"\n[{time.strftime('%H:%M:%S')}] ⚠️  ABNORMAL EXIT (Code {exit_code})")
+                log_watchdog_event(f"CafeSentinel terminated unexpectedly (Exit Code {exit_code}). Restarting...")
                 # Add extra delay to prevent CPU thrashing on repeated crash
                 time.sleep(2)
-            # -----------------------------
 
         except Exception as e:
             print(f"\n❌ WATCHDOG ERROR: {e}")
+            log_watchdog_event(f"Watchdog encountered an error: {type(e).__name__}")
             time.sleep(5)
 
 
@@ -138,7 +166,7 @@ def main():
     if not is_admin():
         try:
             ctypes.windll.shell32.ShellExecuteW(
-                None, "runas", sys.executable, " \".join(sys.argv)", None, 1
+                None, "runas", sys.executable, " ".join(sys.argv), None, 1
             )
         except:
             pass
