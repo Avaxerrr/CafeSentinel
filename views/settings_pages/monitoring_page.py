@@ -129,14 +129,6 @@ class MonitoringPage(BaseSettingsPage):
 
         layout.addWidget(occupancy_card)
 
-        # --- System Settings Card ---
-        system_card = CardFrame("System Settings")
-
-        self.env_state = ToggleSwitch("Enable Stealth Mode (Hide Tray Icons)")
-        self.env_state.setToolTip("Runs app invisibly. Only accessible via Manager or Magic Hotkey.")
-        system_card.add_full_width(self.env_state)
-
-        layout.addWidget(system_card)
         layout.addStretch()
 
     def load_data(self, full_config: dict):
@@ -163,10 +155,6 @@ class MonitoringPage(BaseSettingsPage):
         self.min_session.setValue(occupancy.get('min_session_minutes', 3))
         self.batch_delay.setValue(occupancy.get('batch_delay_seconds', 30))
 
-        # 4. System Settings
-        sys_settings = full_config.get("system_settings", {})
-        self.env_state.setChecked(sys_settings.get("env_state", False))
-
     def get_data(self) -> dict:
         ratio_float = self.resize_ratio.value() / 100.0
 
@@ -189,9 +177,6 @@ class MonitoringPage(BaseSettingsPage):
                 'min_session_minutes': self.min_session.value(),
                 'batch_delay_seconds': self.batch_delay.value(),
                 'hourly_snapshot_enabled': self.hourly_snapshot.isChecked()
-            },
-            'system_settings': {
-                "env_state": self.env_state.isChecked()
             }
         }
 

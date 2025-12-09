@@ -45,7 +45,7 @@ CafeSentinel/
 ├── controllers/
 │   └── system_tray_app.py           # System tray controller, starts all services
 ├── models/
-│   ├── app_logger.py                # Daily rotating log system with archive
+│   ├── app_logger.py                # Daily rotating log system with retention
 │   ├── config_manager.py            # Encrypted config singleton manager
 │   ├── discord_notifier.py          # Discord webhook client
 │   ├── event_logger.py              # CSV incident logging
@@ -59,7 +59,12 @@ CafeSentinel/
 ├── views/
 │   ├── main_window.py               # GUI dashboard
 │   ├── setup_wizard.py              # First-run password setup
-│   └── settings_dialog.py           # Local configuration editor
+│   ├── settings_dialog.py           # Local configuration editor
+│   └── settings_pages/
+│       ├── network_page.py          # Network settings tab
+│       ├── monitoring_page.py       # Monitoring settings tab
+│       ├── discord_page.py          # Discord settings tab
+│       └── system_page.py           # System settings tab (log retention)
 ├── assets/icons/                    # Icon resources
 ├── api_server.py                    # Flask REST API server
 ├── interface.py                     # Main application entry point
@@ -125,6 +130,7 @@ Application controller that initializes and coordinates all services.
 - Monitors watchdog process health via 5-second timer
 - Handles password-protected exit via SecurityManager
 - Manages system tray context menu including settings dialog access
+- Initializes logging system and executes retention cleanup on startup
 
 **Stealth Mode (Headless Operation):**
 - **Implementation:** Configurable via `env_state` boolean in `system_settings`.
@@ -207,7 +213,7 @@ REST API server for remote configuration management and log access.
 | `/api/config` | GET | Retrieve configuration | Complete config object |
 | `/api/config` | POST | Update configuration | Success/error with validation message |
 | `/api/config/backups` | GET | List backup files | Array of backup filenames |
-| `/api/logs` | GET | Today's log lines | Array of log strings (real-time) |
+| `/api/logs` | GET | Today's logs (smart RAM/Disk) | Array of log strings (max 5000 lines, query: ?lines=N) |
 | `/api/logs/archive` | GET | List archived logs | Array of archived log filenames |
 | `/api/logs/archive/<filename>` | GET | Retrieve specific archive | Complete archived log content |
 | `/api/logs/archive/<filename>` | DELETE | Permanently delete archive | Success/error confirmation |
@@ -277,7 +283,8 @@ Configuration stored as encrypted file `cscf.dll` in application directory.
     "webhook_screenshots": ""
   },
   "system_settings": {
-    "env_state": false
+    "env_state": false,
+    "log_retention_days": 30
   }
 }
 ```
@@ -293,7 +300,7 @@ Configuration stored as encrypted file `cscf.dll` in application directory.
 **Local Configuration (via Settings Dialog):**
 - Accessible from system tray context menu
 - Requires admin password for access
-- Three-tab interface: Network, Monitoring, Discord, plus **System Settings** checkbox
+- Four-tab interface: Network, Monitoring, Discord, System
 - Saves via same ConfigManager.update_config() method as API
 - Changes apply immediately via hot-reload
 
@@ -302,6 +309,7 @@ Configuration stored as encrypted file `cscf.dll` in application directory.
 - Screenshot interval: 1-1440 minutes
 - Screenshot quality: 1-100
 - Monitor interval: 1-60 seconds
+- Log retention: 1-365 days
 - All required sections must be present
 - Invalid configurations rejected with error message
 
@@ -393,10 +401,10 @@ All log messages sanitized to prevent information disclosure.
 
 **Sanitization Rules:**
 - Never log file paths or filenames
-- Use generic labels: "CONFIG", "SECURITY", "ARCHIVE"
+- Use generic category labels: SYSTEM, CONFIG, NETWORK, etc.
 - Error messages omit exception details that reveal structure
 - Success messages confirm action without specifics
-- Example: "CONFIG: Settings updated" not "CONFIG: Saved to cscf.dll"
+- Example: "[CONFIG] Updated successfully" not "[CONFIG] Saved to cscf.dll"
 
 **Purpose:**
 - Prevents attackers from identifying critical files
@@ -415,19 +423,21 @@ All log messages sanitized to prevent information disclosure.
 
 ### Architecture
 
-Dual-layer logging system with active log and archive folder.
+Professional 4-phase logging system with rotation, retention, and structured categorization.
 
 **Active Log:**
 - File: `info.log` (current day only)
 - Updated continuously during application runtime
 - Contains only today's activity
+- Automatically rotated at midnight or when size exceeds 5MB
 - Served via API for real-time monitoring
 
 **Archive:**
 - Directory: `probes/` subdirectory
 - Contains historical logs from previous days
-- Files never auto-deleted (manual cleanup required)
+- Files automatically deleted based on retention policy
 - Organized by date: `info-YYYY-MM-DD.log`
+- Manual deletion also available via API
 
 **Memory Buffer:**
 - In-memory circular buffer of last 500 log lines
@@ -459,34 +469,127 @@ Dual-layer logging system with active log and archive folder.
 5. Logging continues without interruption
 6. Rotation event logged in new file
 
+### Log Retention & Cleanup
+
+**Automatic Cleanup:**
+- Configurable retention period via `log_retention_days` setting (default: 30 days)
+- Cleanup executes automatically on application startup
+- Files in `probes/` folder older than retention period permanently deleted
+- Deletion bypasses Windows recycle bin (immediate destruction)
+- Cleanup event logged with count of deleted files
+
+**Retention Configuration:**
+- Located in `system_settings.log_retention_days`
+- Range: 1-365 days recommended
+- Default: 30 days
+- Configurable via Settings Dialog (System tab) or API
+- Changes take effect on next application restart
+
+**Cleanup Process:**
+1. Application starts, reads `log_retention_days` from config
+2. AppLogger.initialize() called by SystemTrayController
+3. AppLogger.cleanup_old_logs() executes
+4. Scans `probes/` directory for .log files
+5. Checks file modification timestamp against cutoff date
+6. Deletes files older than retention period
+7. Logs cleanup summary to current day log
+
+**Example Cleanup Log:**
+```
+[2025-12-09 17:00:00] [LOGGER] Cleaned up 15 old log files (Retention: 30 days)
+```
+
 ### Log Format
 
-Each log line follows consistent format:
+Each log line follows structured categorized format:
 
 ```
-[HH:MM:SS] CATEGORY: Message text
+[YYYY-MM-DD HH:MM:SS] [CATEGORY] Message text
 ```
 
 **Components:**
-- Timestamp: 24-hour format, local time
-- Category: System component identifier (CONFIG, DAEMON, ALERT, etc.)
-- Message: Sanitized text without sensitive file paths
+- **Timestamp:** Full date and time in 24-hour format, local timezone
+- **Category:** Structured tag for filtering and color-coding
+- **Message:** Sanitized text without sensitive file paths or internal structure details
+
+**Standard Categories:**
+
+| Category | Usage |
+|----------|-------|
+| `SYSTEM` | Application startup, shutdown, initialization, API server events |
+| `CONFIG` | Configuration loading, saving, validation, hot-reload events |
+| `NETWORK` | Network scanning, connectivity checks, target validation |
+| `ALERT` | Network outages, failures, incidents started |
+| `RECOVERY` | Network restoration, incident resolution |
+| `DISCORD` | Discord webhook notifications, delivery status |
+| `DAEMON` | Monitoring loop lifecycle events |
+| `TASK` | Scheduled tasks (screenshots, snapshots) |
+| `SETTINGS` | Settings dialog operations, local configuration changes |
+| `STEALTH` | Stealth mode toggle events |
+| `LOGGER` | Log rotation, retention cleanup, archive operations |
+| `WATCHDOG` | Watchdog process monitoring, revival attempts |
+| `ERROR` | Exceptions, failures, error conditions |
+| `ARCHIVE` | Archive file operations (API deletion, retrieval) |
 
 **Example Log Lines:**
 ```
-[05:23:15] SYS_INIT: Kernel thread attached (Singleton Mode)
-[05:23:16] CONFIG: Settings updated successfully
-[05:23:45] ALERT: Router DOWN | Timer Started
-[05:24:12] RECOVERY: Router Restored | Duration: 0:00:27
+[2025-12-09 05:23:15] [SYSTEM] Kernel thread attached (Singleton Mode)
+[2025-12-09 05:23:16] [CONFIG] Updated successfully
+[2025-12-09 05:23:45] [ALERT] Router DOWN | Timer Started
+[2025-12-09 05:24:12] [RECOVERY] Router Restored | Duration: 0:00:27
+[2025-12-09 05:25:00] [TASK] Capturing Routine Screenshot (60m)
+[2025-12-09 06:00:00] [LOGGER] Cleaned up 5 old log files (Retention: 30 days)
+[2025-12-09 08:30:15] [STEALTH] Entering Stealth Mode. Tray icons hidden.
 ```
+
+### Smart API Log Serving
+
+**Intelligent Serving Strategy:**
+- API endpoint `/api/logs` uses smart switching based on request size
+- Requests ≤500 lines: Served from memory buffer (fast, no disk I/O)
+- Requests >500 lines: Read from disk `info.log` (complete history)
+- Provides optimal balance between speed and visibility
+
+**Memory Buffer Serving (Fast Path):**
+- Query: `GET /api/logs?lines=200`
+- Source: In-memory circular buffer (last 500 lines)
+- Response time: <10ms
+- Use case: Real-time monitoring, live log tail
+
+**Disk Serving (Deep History):**
+- Query: `GET /api/logs?lines=2000`
+- Source: Current day `info.log` file on disk
+- Response time: 50-200ms depending on file size
+- Use case: Complete daily history, incident investigation
+
+**Query Parameters:**
+- `?lines=N`: Request N lines (default: 500, min: 10, max: 5000)
+- Clamped to safe range to prevent excessive memory usage
+- Returns actual line count in response (may be less than requested)
+
+**Response Format:**
+```json
+{
+  "status": "success",
+  "lines": 2000,
+  "source": "disk",
+  "logs": ["[2025-12-09 00:00:15] [SYSTEM] ...", "..."]
+}
+```
+
+**Fallback Behavior:**
+- If disk read fails, automatically falls back to memory buffer
+- Errors logged but service continues
+- Manager application always receives some data
 
 ### API Access
 
 **Real-Time Logs (GET /api/logs):**
-- Returns today's log lines from memory buffer
-- Query parameter: `?lines=500` (default 500, max 1000)
-- Fast response (no disk I/O)
-- Used by Manager for live monitoring
+- Returns today's log lines with smart RAM/Disk switching
+- Query parameter: `?lines=500` (default 500, max 5000)
+- Fast response for small requests (<500 lines)
+- Complete history for large requests (>500 lines)
+- Used by Manager for live monitoring and history review
 
 **Archive List (GET /api/logs/archive):**
 - Returns array of archived log filenames
@@ -505,13 +608,7 @@ Each log line follows consistent format:
 - No recycle bin, immediate destruction
 - Requires exact filename from archive list
 - Returns error if file in use or not found
-
-### Retention Policy
-
-- Active log (`info.log`): Rotates daily, never manually deleted
-- Archived logs (`probes/`): Never auto-deleted
-- Manual deletion: Admin reviews and deletes via Manager application
-- Recommended retention: 30-90 days depending on storage and audit needs
+- Security: Only allows deletion of files matching `info-*.log` pattern
 
 ## Network Monitoring
 
@@ -728,7 +825,7 @@ Password-protected GUI for on-site configuration without Manager application.
 
 ### Interface Structure
 
-Three-tab layout covering all configuration sections.
+Four-tab layout covering all configuration sections.
 
 **Network Tab:**
 - Network Targets: Router IP, Server IP, Internet test IP
@@ -743,6 +840,10 @@ Three-tab layout covering all configuration sections.
 - Enable toggle for notifications
 - Shop name for embed footers
 - Three webhook URLs: Alerts, Occupancy, Screenshots
+
+**System Tab:**
+- Stealth Mode: Enable/disable system tray icons
+- Log Retention: Days to keep archived logs (1-365)
 
 ### Save Process
 
@@ -808,7 +909,7 @@ dist/CafeSentinelDeploy/CafeSentinel/
 - `cscf.dll` (encrypted config)
 - `cron.dll` (encrypted passwords)
 - `info.log` (current day log)
-- `probes/` (archived logs)
+- `probes/` (archived logs with retention cleanup)
 - `config_backups/` (encrypted config backups)
 
 ### Nuitka Configuration
@@ -842,8 +943,9 @@ Key compilation flags:
 3. Task Scheduler starts SentinelService.exe (watchdog)
 4. Watchdog detects CafeSentinel.exe not running
 5. Watchdog launches CafeSentinel.exe
-6. Main application starts monitoring
-7. Both processes enter mutual monitoring loop
+6. Main application starts monitoring and initializes logging system
+7. Log retention cleanup executes on startup
+8. Both processes enter mutual monitoring loop
 
 ### Alternative Methods
 
@@ -934,6 +1036,7 @@ All file operations in application use ResourceManager for path resolution.
 
 - First run displays setup wizard requiring admin and privacy passwords
 - Config file auto-created with defaults if missing
+- Log retention cleanup executes automatically on startup
 - Screenshot capture requires at least one monitor connected
 - Network monitoring requires raw socket permissions (admin rights)
 - Watchdog process remains running even if main app exits normally
@@ -946,6 +1049,7 @@ All file operations in application use ResourceManager for path resolution.
 - Monitoring continues without interruption during reload
 - Invalid config rejected with error, previous config retained
 - Screenshot timer resets on interval change
+- Log retention changes apply on next application restart
 
 ### Network Monitoring
 
@@ -958,8 +1062,18 @@ All file operations in application use ResourceManager for path resolution.
 
 - Encrypted files (`cscf.dll`, `cron.dll`) not readable by text editors
 - Config only decryptable on machine where created (hardware-specific key)
-- Log files in `probes/` never auto-deleted (manual cleanup required)
+- Archived logs in `probes/` automatically deleted based on retention policy
 - Archive deletion via API bypasses Windows recycle bin (permanent)
+- Log rotation happens seamlessly without data loss
+
+### Logging Behavior
+
+- Memory buffer holds last 500 lines for fast API access
+- Requests ≤500 lines served from RAM (fast)
+- Requests >500 lines read from disk (complete history)
+- Log format includes full timestamp and structured categories
+- All log messages sanitized to prevent information disclosure
+- Retention cleanup runs only on startup, not during runtime
 
 ## Critical Configuration Requirements
 
@@ -972,6 +1086,10 @@ SessionManager relies on exact field names in configuration.
 - `batch_delay_seconds` (not `batch_delay`)
 - `hourly_snapshot_enabled` (not `hourly_snapshot`)
 
+**System Settings Field Names:**
+- `env_state` (stealth mode toggle)
+- `log_retention_days` (retention policy)
+
 **Consequence of Incorrect Names:**
 - SessionManager uses hardcoded default values
 - Configured values ignored silently
@@ -981,3 +1099,9 @@ SessionManager relies on exact field names in configuration.
 - ConfigManager validates structure but not field name variants
 - Manager application must send exact field names
 - Settings dialog uses exact field names in form submission
+
+***
+
+**Document Version:** 2.0  
+**Last Updated:** December 9, 2025  
+**Changes:** Added Phase 1-4 logging system improvements (rotation, retention, smart API serving, categorization)

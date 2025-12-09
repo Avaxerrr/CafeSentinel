@@ -23,7 +23,7 @@ class SentinelWorker(QObject):
         self.running = True
         self.privacy_mode = False
 
-        AppLogger.log("SYS_INIT: Kernel thread attached (Singleton Mode).")
+        AppLogger.log("Kernel thread attached (Singleton Mode).", category="SYSTEM")
 
         # GET SINGLETON INSTANCE
         self.cfg_mgr = ConfigManager.instance()
@@ -55,7 +55,7 @@ class SentinelWorker(QObject):
     @Slot(dict)
     def on_config_updated(self, new_config):
         """Triggered automatically when ConfigManager emits change signal."""
-        AppLogger.log("CFG_WATCH: Signal received. Updating Sentinel...")
+        AppLogger.log("Signal received. Updating Sentinel...", category="CONFIG")
 
         # Update Config Object
         self.config = new_config
@@ -69,7 +69,7 @@ class SentinelWorker(QObject):
         self._update_settings()
         self.pc_list = self.generate_pc_list()
 
-        AppLogger.log("CFG_WATCH: Hot Reload Complete.")
+        AppLogger.log("Hot Reload Complete.", category="CONFIG")
 
     def _update_settings(self):
         """Central place to update local vars from config."""
@@ -106,7 +106,7 @@ class SentinelWorker(QObject):
 
         if elapsed.total_seconds() > (self.screenshot_interval * 60):
             self.last_screenshot_time = now
-            AppLogger.log(f"TASK: Capturing Routine Screenshot ({self.screenshot_interval}m)")
+            AppLogger.log(f"Capturing Routine Screenshot ({self.screenshot_interval}m)", category="TASK")
 
             img_data, _ = self.camera.capture_to_memory()
             if img_data:
@@ -135,7 +135,7 @@ class SentinelWorker(QObject):
     def _process_component(self, name, is_online, down_start_time):
         now = datetime.now()
         if not is_online and down_start_time is None:
-            AppLogger.log(f"ALERT: {name} DOWN | Timer Started")
+            AppLogger.log(f"{name} DOWN | Timer Started", category="ALERT")
             return now
         elif is_online and down_start_time is not None:
             duration = now - down_start_time
@@ -144,11 +144,11 @@ class SentinelWorker(QObject):
 
             # Hysteresis Check
             if duration_seconds < self.min_incident_duration:
-                AppLogger.log(f"IGNORE: {name} glitch detected ({duration_seconds:.1f}s) - Suppressed.")
+                AppLogger.log(f"{name} glitch detected ({duration_seconds:.1f}s) - Suppressed.", category="NETWORK")
                 return None
 
             # Real incident recovery
-            AppLogger.log(f"RECOVERY: {name} Restored | Duration: {duration_str}")
+            AppLogger.log(f"{name} Restored | Duration: {duration_str}", category="RECOVERY")
             EventLogger.log_resolution(down_start_time, now, f"{name}_DOWN")
 
             img_data, _ = self.camera.capture_to_memory()
@@ -160,7 +160,7 @@ class SentinelWorker(QObject):
         return down_start_time
 
     def start_monitoring(self):
-        AppLogger.log("DAEMON: Monitoring Active")
+        AppLogger.log("Monitoring Active", category="DAEMON")
 
         while self.running:
             loop_start = time.time()
@@ -170,7 +170,7 @@ class SentinelWorker(QObject):
                 # FG_WATCH: Dirty flag checking
                 dirty_status = self.cfg_mgr.check_and_clear_dirty()
                 if dirty_status:
-                    AppLogger.log("CFG_WATCH: Dirty flag detected! Reloading...")
+                    AppLogger.log("Dirty flag detected! Reloading...", category="CONFIG")
                     new_config = self.cfg_mgr.get_config()
                     self.on_config_updated(new_config)
 
@@ -182,7 +182,7 @@ class SentinelWorker(QObject):
 
                 # SAFETY CHECK
                 if not router_ip or not server_ip or not internet_ip:
-                    AppLogger.log("WARN: Targets missing in config. Check Settings.")
+                    AppLogger.log("Targets missing in config. Check Settings.", category="NETWORK")
                     time.sleep(5)
                     continue
 
@@ -242,7 +242,7 @@ class SentinelWorker(QObject):
                 self.handle_routine_screenshot()
 
             except Exception as e:
-                AppLogger.log(f"EXCEPT: {e}")
+                AppLogger.log(f"Exception: {e}", category="ERROR")
 
             elapsed = time.time() - loop_start
             interval = self.config.get('monitor_settings', {}).get('interval_seconds', 2)

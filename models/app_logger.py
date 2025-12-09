@@ -38,6 +38,33 @@ class AppLogger:
         return AppLogger._archive_path
 
     @staticmethod
+    def initialize():
+        """
+        Startup Check:
+        Checks if the existing info.log is from a previous date.
+        If so, archives it immediately before the app starts writing.
+        Must be called once at application startup.
+        """
+        try:
+            log_path = AppLogger._get_log_path()
+            if os.path.exists(log_path):
+                # Get the last modification time of the file
+                mod_timestamp = os.path.getmtime(log_path)
+                mod_date = datetime.fromtimestamp(mod_timestamp).strftime("%Y-%m-%d")
+                today = datetime.now().strftime("%Y-%m-%d")
+
+                # If the file was last touched on a previous date, rotate it now.
+                if mod_date != today:
+                    AppLogger.log(f"Found stale log from {mod_date}. Rotating...", category="LOGGER")
+                    AppLogger._rotate_log(mod_date)
+
+            # Set current date for the session
+            AppLogger._current_date = datetime.now().strftime("%Y-%m-%d")
+
+        except Exception as e:
+            print(f"⚠️ Logger Initialization Failed: {e}")
+
+    @staticmethod
     def _check_rotation():
         """
         Check if we need to rotate the log:
@@ -76,7 +103,7 @@ class AppLogger:
             archived_name = f"info-{date_label}.log"
             archived_full_path = os.path.join(archive_path, archived_name)
 
-            # If file already exists (size rotation), append counter
+            # If file already exists (e.g. restart same day or size rotation), append counter
             counter = 1
             while os.path.exists(archived_full_path):
                 archived_name = f"info-{date_label}-part{counter}.log"
@@ -84,19 +111,23 @@ class AppLogger:
                 counter += 1
 
             os.rename(log_path, archived_full_path)
-            print(f"[LOGGER] Rotated log to {archived_name}")
+            AppLogger.log(f"Rotated log to {archived_name}", category="LOGGER")
 
         except Exception as e:
             print(f"⚠️ Log Rotation Failed: {e}")
 
     @staticmethod
-    def log(message: str):
+    def log(message: str, category: str = "INFO"):
         """
         Log a message to console, file, and memory buffer.
         Automatically handles rotation.
+
+        Args:
+            message: The log message text
+            category: Category tag (SYSTEM, NETWORK, ALERT, CONFIG, etc.)
         """
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        full_msg = f"[{timestamp}] {message}\n"
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        full_msg = f"[{timestamp}] [{category}] {message}\n"
 
         # 1. Console Output
         print(full_msg.strip())
@@ -176,3 +207,65 @@ class AppLogger:
         sanitized = re.sub(r'[A-Za-z]:\\[^\s]+', '[PATH]', message)
         sanitized = re.sub(r'/[^\s]+\.(dll|json|log|txt)', '[FILE]', sanitized)
         return sanitized
+
+    @staticmethod
+    def cleanup_old_logs(retention_days: int):
+        """
+        Deletes log files in probes/ folder older than retention_days.
+        """
+        try:
+            archive_path = AppLogger._get_archive_path()
+            if not os.path.exists(archive_path):
+                return
+
+            now = datetime.now()
+            cutoff = retention_days * 86400  # Convert days to seconds
+
+            count = 0
+            for filename in os.listdir(archive_path):
+                file_path = os.path.join(archive_path, filename)
+
+                # Security check: only delete .log files
+                if not filename.endswith(".log"):
+                    continue
+
+                # Check age
+                if os.path.getmtime(file_path) < (now.timestamp() - cutoff):
+                    try:
+                        os.remove(file_path)
+                        count += 1
+                    except Exception:
+                        pass
+
+            if count > 0:
+                AppLogger.log(f"Cleaned up {count} old log files (Retention: {retention_days} days)", category="LOGGER")
+
+        except Exception as e:
+            print(f"⚠️ Log Cleanup Failed: {e}")
+
+    @staticmethod
+    def get_todays_log_from_disk(count: int = 1000):
+        """
+        Returns the last N lines from TODAY's log file (disk).
+        Used when the memory buffer is insufficient.
+        Falls back to memory buffer if file read fails.
+        """
+        try:
+            log_path = AppLogger._get_log_path()
+
+            # If file doesn't exist yet (fresh start), return memory buffer
+            if not os.path.exists(log_path):
+                return AppLogger.get_recent_logs(count)
+
+            # Read all lines from file
+            with open(log_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+
+            # Strip newlines and return last N lines
+            lines = [line.strip() for line in lines]
+            return lines[-count:] if len(lines) > count else lines
+
+        except Exception as e:
+            print(f"⚠️ Disk Log Read Failed: {e}")
+            # Fallback to memory buffer
+            return AppLogger.get_recent_logs(count)

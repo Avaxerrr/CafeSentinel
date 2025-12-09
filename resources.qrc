@@ -27,6 +27,8 @@
 
         <!-- Mini Help Icon -->
         <file alias="mini-help.svg">assets/icons/mini-help.svg</file>
+
+        <file alias="system-settings">assets/icons/system-settings.svg</file>
     </qresource>
 
     <!-- Font -->

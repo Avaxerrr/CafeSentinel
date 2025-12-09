@@ -65,7 +65,7 @@ def update_config():
             }), 400
 
     except Exception as e:
-        AppLogger.log(f"API error: {e}")
+        AppLogger.log(f"API error: {e}", category="ERROR")
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -91,18 +91,30 @@ def list_backups():
 @app.route('/api/logs', methods=['GET'])
 def get_logs():
     """
-    Returns TODAY's logs from memory buffer (real-time).
-    Query param: ?lines=500 (optional, default 500)
+    Returns TODAY's logs.
+    - If lines <= 500: Serves from RAM (fast)
+    - If lines > 500: Reads from disk (complete history)
+
+    Query param: ?lines=500 (optional, default 500, max 5000)
     """
     try:
         line_count = request.args.get('lines', default=500, type=int)
-        line_count = max(10, min(line_count, 1000))
+        line_count = max(10, min(line_count, 5000))  # Clamp between 10 and 5000
 
-        logs = AppLogger.get_recent_logs(line_count)
+        # Smart switching: RAM vs Disk
+        if line_count <= 500:
+            # Fast path: Memory buffer
+            logs = AppLogger.get_recent_logs(line_count)
+            source = "memory"
+        else:
+            # Deep history: Read from disk
+            logs = AppLogger.get_todays_log_from_disk(line_count)
+            source = "disk"
 
         return jsonify({
             "status": "success",
             "lines": len(logs),
+            "source": source,
             "logs": logs
         })
     except Exception as e:
@@ -115,7 +127,7 @@ def get_logs():
 @app.route('/api/logs/archive', methods=['GET'])
 def list_archived_logs():
     """
-    ⭐ NEW: Lists all archived log files in probes/ folder.
+    Lists all archived log files in probes/ folder.
     Returns filenames sorted newest first.
     """
     try:
@@ -135,7 +147,7 @@ def list_archived_logs():
 @app.route('/api/logs/archive/<filename>', methods=['GET'])
 def get_archived_log(filename):
     """
-    ⭐ NEW: Returns the contents of a specific archived log.
+    Returns the contents of a specific archived log.
     Example: GET /api/logs/archive/info-2025-11-30.log
     """
     try:
@@ -195,7 +207,7 @@ def delete_archived_log(filename):
         # PERMANENT DELETION (no recycle bin)
         os.remove(file_path)
 
-        AppLogger.log(f"ARCHIVE: Purged log file via API")  # Don't log filename (security)
+        AppLogger.log("Purged log file via API", category="ARCHIVE")  # Don't log filename (security)
 
         return jsonify({
             "status": "success",
@@ -208,7 +220,7 @@ def delete_archived_log(filename):
             "message": "Permission denied - file may be in use"
         }), 403
     except Exception as e:
-        AppLogger.log(f"ARCHIVE: Deletion failed - {type(e).__name__}")  # Log error type, not details
+        AppLogger.log(f"Deletion failed - {type(e).__name__}", category="ARCHIVE")  # Log error type, not details
         return jsonify({
             "status": "error",
             "message": "Deletion failed"
@@ -234,10 +246,10 @@ def internal_error(error):
 def run_api_server(host='0.0.0.0', port=5000):
     """Start Flask API server"""
     try:
-        AppLogger.log(f"Starting Config API on {host}:{port}")
+        AppLogger.log(f"Starting Config API on {host}:{port}", category="SYSTEM")
         app.run(host=host, port=port, debug=False, threaded=True)
     except Exception as e:
-        AppLogger.log(f"API server failed: {e}")
+        AppLogger.log(f"API server failed: {e}", category="ERROR")
 
 
 if __name__ == '__main__':

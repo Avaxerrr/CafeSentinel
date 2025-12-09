@@ -34,7 +34,7 @@ def process_exists(process_name):
         output = subprocess.check_output(cmd, shell=True, creationflags=0x08000000).decode()
         return process_name.lower() in output.lower()
     except Exception as e:
-        AppLogger.log(f"ERROR: process_exists check failed for {process_name}: {e}")
+        AppLogger.log(f"process_exists check failed for {process_name}: {e}", category="ERROR")
         return False
 
 
@@ -52,21 +52,21 @@ def ensure_watchdog_running():
         return
 
     # Not running - attempt revival
-    AppLogger.log(f"WATCHDOG: {watchdog_name} not found. Attempting to revive...")
+    AppLogger.log(f"{watchdog_name} not found. Attempting to revive...", category="WATCHDOG")
 
     base_dir = os.path.dirname(sys.executable)
     watchdog_path = os.path.join(base_dir, "SentinelService", watchdog_name)
 
     if not os.path.exists(watchdog_path):
-        AppLogger.log(f"WATCHDOG ERROR: File not found at: {watchdog_path}")
+        AppLogger.log(f"File not found at: {watchdog_path}", category="ERROR")
         return
 
     try:
-        AppLogger.log(f"WATCHDOG: Launching {watchdog_path}...")
+        AppLogger.log(f"Launching {watchdog_path}...", category="WATCHDOG")
         subprocess.Popen([watchdog_path], close_fds=True, creationflags=0x00000008)
-        AppLogger.log("WATCHDOG: Launch command sent successfully.")
+        AppLogger.log("Launch command sent successfully.", category="WATCHDOG")
     except Exception as e:
-        AppLogger.log(f"WATCHDOG FATAL: Failed to launch service: {e}")
+        AppLogger.log(f"Failed to launch service: {e}", category="ERROR")
 
 # -------------------------------------
 
@@ -159,10 +159,10 @@ class SystemTrayController(QObject):
                 daemon=True  # Dies when main app exits
             )
             api_thread.start()
-            AppLogger.log("✅ Remote Config API started on port 5000")
+            AppLogger.log("Remote Config API started on port 5000", category="SYSTEM")
         except Exception as e:
-            AppLogger.log(f"⚠️ API server failed to start: {e}")
-            AppLogger.log("⚠️ App will continue without remote config capability")
+            AppLogger.log(f"API server failed to start: {e}", category="ERROR")
+            AppLogger.log("App will continue without remote config capability", category="SYSTEM")
 
     def setup_menu(self):
         menu_font = QFont("SUSE", 9)
@@ -250,7 +250,7 @@ class SystemTrayController(QObject):
                                             QLineEdit.Password)
         if ok and password:
             if SecurityManager.verify_admin(password):
-                AppLogger.log("SYS: User requested shutdown with valid password.")
+                AppLogger.log("User requested shutdown with valid password.", category="SYSTEM")
                 self.worker.running = False
                 self.worker_thread.quit()
                 self.worker_thread.wait()
@@ -272,7 +272,7 @@ class SystemTrayController(QObject):
 
         if ok and password:
             if SecurityManager.verify_admin(password):
-                AppLogger.log("SETTINGS: Dialog opened with valid credentials")
+                AppLogger.log("Dialog opened with valid credentials", category="SETTINGS")
                 dialog = SettingsDialog()
                 dialog.exec()
             else:
@@ -287,17 +287,22 @@ class SystemTrayController(QObject):
         from models.config_manager import ConfigManager
         config = ConfigManager.instance().get_config()
 
+        retention_days = config.get("system_settings", {}).get("log_retention_days", 30)
+
+        AppLogger.initialize()
+        AppLogger.cleanup_old_logs(retention_days)
+
         # Get env_state setting (default to False if not present)
         self.env_state = config.get("system_settings", {}).get("env_state", False)
 
         if self.env_state:
             # STEALTH ON: Hide all tray icons
-            AppLogger.log("STEALTH: Entering Stealth Mode. Tray icons hidden.")
+            AppLogger.log("Entering Stealth Mode. Tray icons hidden.", category="STEALTH")
             for key, data in self.trays.items():
                 data["obj"].hide()
         else:
             # STEALTH OFF: Show all tray icons
-            AppLogger.log("STEALTH: Exiting Stealth Mode. Tray icons visible.")
+            AppLogger.log("Exiting Stealth Mode. Tray icons visible.", category="STEALTH")
             for key, data in self.trays.items():
                 data["obj"].show()
 
@@ -309,5 +314,5 @@ class SystemTrayController(QObject):
         new_env_state = new_config.get("system_settings", {}).get("env_state", False)
 
         if new_env_state != self.env_state:
-            AppLogger.log(f"STEALTH: Mode changed from {self.env_state} to {new_env_state}")
+            AppLogger.log(f"Mode changed from {self.env_state} to {new_env_state}", category="STEALTH")
             self.apply_stealth_mode()

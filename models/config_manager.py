@@ -66,7 +66,8 @@ class ConfigManager(QObject):
             "webhook_screenshots": ""
         },
         "system_settings": {
-            "env_state": False
+            "env_state": False,
+            "log_retention_days": 30
         }
     }
 
@@ -119,27 +120,27 @@ class ConfigManager(QObject):
                 decrypted_data = self.cipher.decrypt(encrypted_data)
                 self.config = json.loads(decrypted_data.decode())
             except Exception as e:
-                AppLogger.log("CONFIG: ⚠️ Load error. Using defaults.")
+                AppLogger.log("Load error. Using defaults.", category="CONFIG")
                 self.config = self.DEFAULT_CONFIG.copy()
 
         # 2. Check for Legacy JSON (Migration)
         elif os.path.exists(self.abs_legacy_path):
-            AppLogger.log("CONFIG: Legacy format detected. Upgrading...")
+            AppLogger.log("Legacy format detected. Upgrading...", category="CONFIG")
             try:
                 with open(self.abs_legacy_path, 'r') as f:
                     self.config = json.load(f)
 
                 self._save_to_disk(self.config)
                 os.rename(self.abs_legacy_path, self.abs_legacy_path + ".bak")
-                AppLogger.log("CONFIG: Upgrade complete.")
+                AppLogger.log("Upgrade complete.", category="CONFIG")
             except Exception as e:
-                AppLogger.log("CONFIG: Upgrade failed. Using defaults.")
+                AppLogger.log("Upgrade failed. Using defaults.", category="CONFIG")
                 self.config = self.DEFAULT_CONFIG.copy()
                 self._save_to_disk(self.config)
 
         # 3. Fresh Install
         else:
-            AppLogger.log("CONFIG: Initializing with default settings...")
+            AppLogger.log("Initializing with default settings...", category="CONFIG")
             self.config = self.DEFAULT_CONFIG.copy()
             self._save_to_disk(self.config)
 
@@ -174,16 +175,16 @@ class ConfigManager(QObject):
                 # 5. Emit Signal (for same-thread listeners like future GUI)
                 self.sig_config_changed.emit(self.config)
 
-                AppLogger.log("CONFIG: Updated successfully.")
+                AppLogger.log("Updated successfully.", category="CONFIG")
                 return True, "Configuration updated successfully"
 
             except Exception as e:
-                AppLogger.log(f"CONFIG: Update Failed! {e}")
+                AppLogger.log(f"Update Failed! {e}", category="CONFIG")
                 return False, str(e)
 
     def check_and_clear_dirty(self) -> bool:
         """
-        ⭐ NEW: Check if config was updated, and clear the flag.
+        Check if config was updated, and clear the flag.
         Returns True if config needs to be reloaded.
         Thread-safe.
         """
@@ -212,7 +213,7 @@ class ConfigManager(QObject):
                 shutil.copy(self.abs_config_path, backup_path)
                 self._cleanup_old_backups()
         except Exception as e:
-            AppLogger.log("CONFIG: Backup operation failed.")
+            AppLogger.log("Backup operation failed.", category="CONFIG")
 
     def _cleanup_old_backups(self):
         """Keeps only the last 10 backups."""
@@ -250,25 +251,25 @@ class ConfigManager(QObject):
 
         for key in required_keys:
             if key not in config:
-                AppLogger.log(f"Validation failed: Missing key '{key}'")
+                AppLogger.log(f"Validation failed: Missing key '{key}'", category="CONFIG")
                 return False, f"Missing key '{key}'"
 
         # Validate screenshot_settings
         screenshot = config.get('screenshot_settings', {})
         if 'interval_minutes' in screenshot:
             if not (1 <= screenshot['interval_minutes'] <= 1440):
-                AppLogger.log("Validation failed: Invalid screenshot interval")
+                AppLogger.log("Validation failed: Invalid screenshot interval", category="CONFIG")
                 return False, "Invalid screenshot interval (1-1440)"
         if 'quality' in screenshot:
             if not (1 <= screenshot['quality'] <= 100):
-                AppLogger.log("Validation failed: Invalid screenshot quality")
+                AppLogger.log("Validation failed: Invalid screenshot quality", category="CONFIG")
                 return False, "Invalid screenshot quality (1-100)"
 
         # Validate monitor_settings
         monitor = config.get('monitor_settings', {})
         if 'interval_seconds' in monitor:
             if not (1 <= monitor['interval_seconds'] <= 60):
-                AppLogger.log("Validation failed: Invalid monitor interval")
+                AppLogger.log("Validation failed: Invalid monitor interval", category="CONFIG")
                 return False, "Invalid monitor interval (1-60)"
 
         return True, "Valid"

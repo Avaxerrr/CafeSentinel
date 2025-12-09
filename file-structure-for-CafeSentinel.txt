@@ -7,20 +7,36 @@ CafeSentinel/
 |    |    \--- SUSE-VariableFont_wght.ttf
 |    |    
 |    +--- icons
-|         +--- internet_off.svg
-|         +--- internet_on.svg
-|         +--- net_bad.svg
-|         +--- net_ok.svg
-|         +--- pc_off.svg
-|         +--- pc_on.svg
-|         +--- router_bad.svg
-|         +--- router_off.svg
-|         +--- router_ok.svg
-|         +--- router_on.svg
-|         +--- server_bad.svg
-|         +--- server_off.svg
-|         +--- server_ok.svg
-|         \--- server_on.svg
+|    |    +--- arrow_down.svg
+|    |    +--- arrow_up.svg
+|    |    +--- computer_256dp_888_FILL0_wght400_GRAD0_opsz48.svg
+|    |    +--- internet_off.svg
+|    |    +--- internet_on.svg
+|    |    +--- mini-help.svg
+|    |    +--- net_bad.svg
+|    |    +--- net_ok.svg
+|    |    +--- pc_off.svg
+|    |    +--- pc_on.svg
+|    |    +--- router_bad.svg
+|    |    +--- router_off.svg
+|    |    +--- router_ok.svg
+|    |    +--- router_on.svg
+|    |    +--- server_bad.svg
+|    |    +--- server_off.svg
+|    |    +--- server_ok.svg
+|    |    +--- server_on.svg
+|    |    \--- system-settings.svg
+|    |    
+|    +--- internet_off.svg
+|    +--- internet_on.svg
+|    +--- pc.svg
+|    +--- pc_off.svg
+|    +--- pc_offaa.svg
+|    +--- pc_on.svg
+|    +--- router_off.svg
+|    +--- router_on.svg
+|    +--- server_off.svg
+|    \--- server_on.svg
 |    
 +--- config_backups
 +--- controllers
@@ -41,6 +57,7 @@ CafeSentinel/
 |    \--- startup_manager.py
 |    
 +--- probes
+|
 +--- utils
 |    +--- __init__.py
 |    \--- resource_manager.py
@@ -51,7 +68,8 @@ CafeSentinel/
 |    |    +--- base_page.py
 |    |    +--- discord_page.py
 |    |    +--- monitoring_page.py
-|    |    \--- network_page.py
+|    |    +--- network_page.py
+|    |    \--- system_page.py
 |    |    
 |    +--- __init__.py
 |    +--- custom_widgets.py

@@ -16,6 +16,7 @@ except ImportError:
 from views.settings_pages.network_page import NetworkPage
 from views.settings_pages.monitoring_page import MonitoringPage
 from views.settings_pages.discord_page import DiscordPage
+from views.settings_pages.system_page import SystemPage
 
 class SettingsDialog(QDialog):
     """
@@ -63,6 +64,7 @@ class SettingsDialog(QDialog):
         self.add_nav_item("Network", ":/icons/router_on")
         self.add_nav_item("Monitoring", ":/icons/pc_on")
         self.add_nav_item("Discord", ":/icons/server_on")
+        self.add_nav_item("system-settings", ":/icons/system-settings")
 
         # --- Right Content Stack ---
         self.pages_stack = QStackedWidget()
@@ -72,11 +74,13 @@ class SettingsDialog(QDialog):
         self.network_page = NetworkPage()
         self.monitoring_page = MonitoringPage()
         self.discord_page = DiscordPage()
+        self.system_page = SystemPage()
 
         # Add pages wrapped in ScrollAreas
         self.pages_stack.addWidget(self.create_scroll_wrapper(self.network_page))
         self.pages_stack.addWidget(self.create_scroll_wrapper(self.monitoring_page))
         self.pages_stack.addWidget(self.create_scroll_wrapper(self.discord_page))
+        self.pages_stack.addWidget(self.create_scroll_wrapper(self.system_page))
 
         # Wiring: Sidebar Click -> Switch Page
         self.sidebar.currentRowChanged.connect(self.pages_stack.setCurrentIndex)
@@ -147,6 +151,7 @@ class SettingsDialog(QDialog):
         self.network_page.load_data(self.config)
         self.monitoring_page.load_data(self.config)
         self.discord_page.load_data(self.config)
+        self.system_page.load_data(self.config)
 
     def save_settings(self):
         """Gather data from all pages, validate, and save"""
@@ -155,7 +160,8 @@ class SettingsDialog(QDialog):
             pages = [
                 (self.network_page, "Network"),
                 (self.monitoring_page, "Monitoring"),
-                (self.discord_page, "Discord")
+                (self.discord_page, "Discord"),
+                (self.system_page, "System")
             ]
 
             for page, name in pages:
@@ -171,17 +177,18 @@ class SettingsDialog(QDialog):
             new_config.update(self.network_page.get_data())
             new_config.update(self.monitoring_page.get_data())
             new_config.update(self.discord_page.get_data())
+            new_config.update(self.system_page.get_data())
 
             # 3. Save Phase
             success, message = self.cfg_mgr.update_config(new_config)
 
             if success:
                 QMessageBox.information(self, "Success", "Settings saved successfully!")
-                AppLogger.log("SETTINGS: Configuration updated via local dialog")
+                AppLogger.log("Configuration updated via local dialog", category="SETTINGS")
                 self.accept()
             else:
                 QMessageBox.warning(self, "Error", f"Failed to save: {message}")
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Unexpected error: {str(e)}")
-            AppLogger.log(f"SETTINGS: Save failed - {e}")
+            AppLogger.log(f"Save failed - {e}", category="SETTINGS")
