@@ -1,7 +1,6 @@
-from PySide6.QtWidgets import (QVBoxLayout, QWidget, QLabel, QLineEdit,
-                               QGroupBox, QGridLayout)
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QLabel, QLineEdit
 from views.settings_pages.base_page import BaseSettingsPage
-from views.custom_widgets import ToggleSwitch, CardFrame  # <-- NEW IMPORTS
+from views.custom_widgets import ToggleSwitch, CardFrame
 
 class DiscordPage(BaseSettingsPage):
     def __init__(self, parent=None):
@@ -13,41 +12,54 @@ class DiscordPage(BaseSettingsPage):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # --- Discord Settings Group (CardFrame + ToggleSwitch) ---
-        discord_layout = QGridLayout()
-        discord_layout.setColumnStretch(1, 1)
+        # --- Discord Notifications Card ---
+        discord_card = CardFrame("Discord Notifications")
 
-        # Updated: ToggleSwitch
-        self.discord_enabled = ToggleSwitch("Enable Discord Notifications")
-        discord_layout.addWidget(self.discord_enabled, 0, 0, 1, 2)
+        # Toggle at top
+        self.discord_enabled = ToggleSwitch("Enable Notifications")
+        self.discord_enabled.setToolTip("Send alerts to your Discord server.")
+        discord_card.add_full_width(self.discord_enabled)
 
-        discord_layout.addWidget(QLabel("Shop Name:"), 1, 0)
         self.shop_name = QLineEdit()
-        discord_layout.addWidget(self.shop_name, 1, 1)
+        self.shop_name.setPlaceholderText("Respawn Gaming")
+        discord_card.add_row(
+            "Shop Name",
+            self.shop_name,
+            "The name that appears at the bottom of every Discord alert.",
+            stretch_input=True
+        )
 
-        discord_layout.addWidget(QLabel("Alerts Webhook:"), 2, 0)
         self.webhook_alerts = QLineEdit()
         self.webhook_alerts.setPlaceholderText("https://discord.com/api/webhooks/...")
-        discord_layout.addWidget(self.webhook_alerts, 2, 1)
+        discord_card.add_row(
+            "Alerts Webhook",
+            self.webhook_alerts,
+            "Paste Discord Webhook URL here for Urgent Alerts\n(Internet Down, Server Offline).",
+            stretch_input=True
+        )
 
-        discord_layout.addWidget(QLabel("Occupancy Webhook:"), 3, 0)
         self.webhook_occupancy = QLineEdit()
         self.webhook_occupancy.setPlaceholderText("https://discord.com/api/webhooks/...")
-        discord_layout.addWidget(self.webhook_occupancy, 3, 1)
+        discord_card.add_row(
+            "Occupancy Webhook",
+            self.webhook_occupancy,
+            "Paste Discord Webhook URL here for PC Usage logs\n(PC 1 Online, Hourly Reports).",
+            stretch_input=True
+        )
 
-        discord_layout.addWidget(QLabel("Screenshots Webhook:"), 4, 0)
         self.webhook_screenshots = QLineEdit()
         self.webhook_screenshots.setPlaceholderText("https://discord.com/api/webhooks/...")
-        discord_layout.addWidget(self.webhook_screenshots, 4, 1)
+        discord_card.add_row(
+            "Screenshots Webhook",
+            self.webhook_screenshots,
+            "Paste Discord Webhook URL here for Screenshot uploads.",
+            stretch_input=True
+        )
 
-        # Wrap in CardFrame
-        discord_card = CardFrame("Discord Notifications", discord_layout)
         layout.addWidget(discord_card)
-
         layout.addStretch()
 
     def load_data(self, full_config: dict):
-        # Load Discord Settings
         discord = full_config.get('discord_settings', {})
         self.discord_enabled.setChecked(discord.get('enabled', False))
         self.shop_name.setText(discord.get('shop_name', ''))
@@ -67,7 +79,7 @@ class DiscordPage(BaseSettingsPage):
         }
 
     def validate(self) -> tuple[bool, str]:
-        # If enabled, at least one webhook should probably be present,
-        # but we won't force it strictly to avoid annoyance.
-        # We can add logic here if needed.
+        if self.discord_enabled.isChecked():
+            if not self.shop_name.text().strip():
+                return False, "Shop Name is required when Discord is enabled."
         return True, ""

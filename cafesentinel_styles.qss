@@ -637,8 +637,22 @@ QLabel#CardTitle {
     background: transparent;
 }
 
-/* Toggle Switch Widget (Custom drawn in Python, no heavy CSS needed here) */
-/* This is just a safety fallback or helper if needed */
-QWidget[class="toggle-switch"] {
+/* Field Labels (next to help icons) */
+QLabel#FieldLabel {
+    color: #b9bbbe;
+    font-weight: 600;
     background: transparent;
+}
+
+/* Override the global QWidget background for containers inside Cards */
+QFrame#Card QWidget {
+    background: transparent;
+}
+
+/* roper backgrounds for input fields inside Cards */
+QFrame#Card QLineEdit,
+QFrame#Card QSpinBox,
+QFrame#Card QDoubleSpinBox,
+QFrame#Card QComboBox {
+    background-color: #2D2D30;
 }

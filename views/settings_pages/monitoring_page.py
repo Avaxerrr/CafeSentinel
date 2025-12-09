@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QVBoxLayout, QWidget, QLabel, QLineEdit,
-                               QSpinBox, QGridLayout)
+                               QSpinBox, QHBoxLayout)
 from views.settings_pages.base_page import BaseSettingsPage
 from views.custom_widgets import ToggleSwitch, CardFrame
 
@@ -13,103 +13,130 @@ class MonitoringPage(BaseSettingsPage):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(15)
 
-        # --- Monitor Group (CardFrame) ---
-        monitor_layout = QGridLayout()
-        monitor_layout.setColumnStretch(1, 1)
+        # --- Scan Settings Card ---
+        monitor_card = CardFrame("Scan Settings")
 
-        monitor_layout.addWidget(QLabel("Check Interval (sec):"), 0, 0)
         self.monitor_interval = QSpinBox()
         self.monitor_interval.setRange(1, 60)
-        monitor_layout.addWidget(self.monitor_interval, 0, 1)
+        self.monitor_interval.setSuffix(" sec")
+        monitor_card.add_row(
+            "Check Interval",
+            self.monitor_interval,
+            "How often to check connection status.\nLower is faster but uses more network traffic."
+        )
 
-        monitor_layout.addWidget(QLabel("PC Subnet:"), 1, 0)
         self.pc_subnet = QLineEdit()
         self.pc_subnet.setPlaceholderText("192.168.1")
-        monitor_layout.addWidget(self.pc_subnet, 1, 1)
+        monitor_card.add_row(
+            "PC Subnet",
+            self.pc_subnet,
+            "The first 3 parts of your Client PC IP addresses.\nExample: If PC is 192.168.1.10, enter '192.168.1'."
+        )
 
-        monitor_layout.addWidget(QLabel("PC Start Range:"), 2, 0)
         self.pc_start = QSpinBox()
         self.pc_start.setRange(1, 254)
-        monitor_layout.addWidget(self.pc_start, 2, 1)
+        monitor_card.add_row(
+            "PC Start Range",
+            self.pc_start,
+            "The last number of the first PC IP.\nExample: If first PC is 192.168.1.10, enter 10."
+        )
 
-        monitor_layout.addWidget(QLabel("PC Count:"), 3, 0)
         self.pc_count = QSpinBox()
         self.pc_count.setRange(1, 100)
-        monitor_layout.addWidget(self.pc_count, 3, 1)
+        monitor_card.add_row(
+            "PC Count",
+            self.pc_count,
+            "How many PCs to scan starting from the Start Range."
+        )
 
-        # Wrap in CardFrame
-        monitor_card = CardFrame("Scan Settings", monitor_layout)
         layout.addWidget(monitor_card)
 
-        # --- Screenshot Group (CardFrame + ToggleSwitch) ---
-        screenshot_layout = QGridLayout()
-        screenshot_layout.setColumnStretch(1, 1)
+        # --- Screenshot Settings Card ---
+        screenshot_card = CardFrame("Screenshots")
 
-        # Updated: ToggleSwitch
+        # Toggle at top
         self.screenshot_enabled = ToggleSwitch("Enable Screenshots")
-        screenshot_layout.addWidget(self.screenshot_enabled, 0, 0, 1, 2)
+        self.screenshot_enabled.setToolTip("Turn on/off automatic screen capture of the Timer PC.")
+        screenshot_card.add_full_width(self.screenshot_enabled)
 
-        screenshot_layout.addWidget(QLabel("Interval (min):"), 1, 0)
         self.screenshot_interval = QSpinBox()
         self.screenshot_interval.setRange(1, 1440)
-        screenshot_layout.addWidget(self.screenshot_interval, 1, 1)
+        self.screenshot_interval.setSuffix(" min")
+        screenshot_card.add_row(
+            "Interval",
+            self.screenshot_interval,
+            "How many minutes to wait between each screenshot."
+        )
 
-        screenshot_layout.addWidget(QLabel("Quality:"), 2, 0)
         self.screenshot_quality = QSpinBox()
         self.screenshot_quality.setRange(10, 100)
         self.screenshot_quality.setSuffix("%")
-        screenshot_layout.addWidget(self.screenshot_quality, 2, 1)
+        screenshot_card.add_row(
+            "Quality",
+            self.screenshot_quality,
+            "Image clarity (10-100).\nLower quality = smaller file size."
+        )
 
-        screenshot_layout.addWidget(QLabel("Resize Ratio (%):"), 3, 0)
         self.resize_ratio = QSpinBox()
         self.resize_ratio.setRange(10, 100)
         self.resize_ratio.setSingleStep(5)
         self.resize_ratio.setSuffix("%")
-        screenshot_layout.addWidget(self.resize_ratio, 3, 1)
+        screenshot_card.add_row(
+            "Resize Ratio",
+            self.resize_ratio,
+            "Shrink images to save space and upload faster.\n50% is usually readable enough."
+        )
 
-        # Wrap in CardFrame
-        screenshot_card = CardFrame("Screenshots", screenshot_layout)
         layout.addWidget(screenshot_card)
 
-        # --- Occupancy Group (CardFrame + ToggleSwitch) ---
-        occupancy_layout = QGridLayout()
-        occupancy_layout.setColumnStretch(1, 1)
+        # --- Occupancy Tracking Card ---
+        occupancy_card = CardFrame("Occupancy Tracking")
 
-        # Updated: ToggleSwitch
+        # Toggles at top
+        toggles_container = QWidget()
+        toggles_layout = QHBoxLayout(toggles_container)
+        toggles_layout.setContentsMargins(0, 0, 0, 0)
+        toggles_layout.setSpacing(20)
+
         self.occupancy_enabled = ToggleSwitch("Enable Tracking")
-        occupancy_layout.addWidget(self.occupancy_enabled, 0, 0, 1, 2)
+        self.occupancy_enabled.setToolTip("Monitor which PCs are currently being used.")
+        toggles_layout.addWidget(self.occupancy_enabled)
 
-        # Updated: ToggleSwitch
         self.hourly_snapshot = ToggleSwitch("Hourly Snapshots")
-        occupancy_layout.addWidget(self.hourly_snapshot, 1, 0, 1, 2)
+        self.hourly_snapshot.setToolTip("Send a summary of occupied PCs every hour to Discord.")
+        toggles_layout.addWidget(self.hourly_snapshot)
 
-        occupancy_layout.addWidget(QLabel("Min Session (min):"), 2, 0)
+        toggles_layout.addStretch()
+        occupancy_card.add_full_width(toggles_container)
+
         self.min_session = QSpinBox()
         self.min_session.setRange(1, 60)
-        occupancy_layout.addWidget(self.min_session, 2, 1)
+        self.min_session.setSuffix(" min")
+        occupancy_card.add_row(
+            "Min Session",
+            self.min_session,
+            "Ignore PC usage shorter than this time.\nFilters out quick restarts."
+        )
 
-        occupancy_layout.addWidget(QLabel("Batch Delay (sec):"), 3, 0)
         self.batch_delay = QSpinBox()
         self.batch_delay.setRange(1, 300)
-        occupancy_layout.addWidget(self.batch_delay, 3, 1)
+        self.batch_delay.setSuffix(" sec")
+        occupancy_card.add_row(
+            "Batch Delay",
+            self.batch_delay,
+            "Wait this long before sending 'PC Online' alerts.\nGroups multiple startups into one message."
+        )
 
-        # Wrap in CardFrame
-        occupancy_card = CardFrame("Occupancy Tracking", occupancy_layout)
         layout.addWidget(occupancy_card)
 
-        # --- System Settings Group (CardFrame + ToggleSwitch) ---
-        system_layout = QGridLayout()
-        system_layout.setColumnStretch(1, 1)
+        # --- System Settings Card ---
+        system_card = CardFrame("System Settings")
 
-        # Updated: ToggleSwitch
         self.env_state = ToggleSwitch("Enable Stealth Mode (Hide Tray Icons)")
         self.env_state.setToolTip("Runs app invisibly. Only accessible via Manager or Magic Hotkey.")
-        system_layout.addWidget(self.env_state, 0, 0, 1, 2)
+        system_card.add_full_width(self.env_state)
 
-        # Wrap in CardFrame
-        system_card = CardFrame("System Settings", system_layout)
         layout.addWidget(system_card)
-
         layout.addStretch()
 
     def load_data(self, full_config: dict):
@@ -126,7 +153,6 @@ class MonitoringPage(BaseSettingsPage):
         self.screenshot_interval.setValue(screenshot.get('interval_minutes', 60))
         self.screenshot_quality.setValue(screenshot.get('quality', 80))
 
-        # Config has 0.75 -> Convert to 75
         ratio_val = int(screenshot.get('resize_ratio', 1.0) * 100)
         self.resize_ratio.setValue(ratio_val)
 
@@ -142,7 +168,6 @@ class MonitoringPage(BaseSettingsPage):
         self.env_state.setChecked(sys_settings.get("env_state", False))
 
     def get_data(self) -> dict:
-        # User enters 75 -> Return 0.75
         ratio_float = self.resize_ratio.value() / 100.0
 
         return {

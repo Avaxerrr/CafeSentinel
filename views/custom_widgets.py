@@ -1,8 +1,37 @@
 from PySide6.QtWidgets import (QCheckBox, QFrame, QVBoxLayout, QLabel,
-                               QWidget, QGridLayout, QHBoxLayout)
-from PySide6.QtGui import QPainter, QColor, QIcon
-from PySide6.QtCore import Qt, QRect, QSize, QTimer
+                               QWidget, QGridLayout, QHBoxLayout, QToolTip)
+from PySide6.QtGui import QPainter, QColor, QIcon, QCursor, QMouseEvent
+from PySide6.QtCore import Qt, QRect, QSize, QTimer, QPoint
+from PySide6.QtSvg import QSvgRenderer
 
+
+
+class HelpIcon(QWidget):
+    """
+    Small question mark icon that shows tooltip on hover or click.
+    """
+
+    def __init__(self, tooltip_text, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(16, 16)
+        self.help_text = tooltip_text
+
+        # Standard Hover behavior
+        self.setToolTip(tooltip_text)
+
+        self.setCursor(Qt.PointingHandCursor)
+        self.renderer = QSvgRenderer(":/icons/mini-help.svg")
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        self.renderer.render(painter, self.rect())
+        painter.end()
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.LeftButton:
+            # Show tooltip at cursor position when clicked
+            QToolTip.showText(QCursor.pos(), self.help_text)
 
 
 class ToggleSwitch(QCheckBox):
@@ -14,7 +43,6 @@ class ToggleSwitch(QCheckBox):
     def __init__(self, text="", parent=None):
         super().__init__(text, parent)
         self.setCursor(Qt.PointingHandCursor)
-        # We do NOT setFixedSize here because width depends on text length
 
     def hitButton(self, pos):
         """Allow clicking anywhere on the widget (text or switch)."""
@@ -24,12 +52,8 @@ class ToggleSwitch(QCheckBox):
         """Tell the layout exactly how big we need to be."""
         switch_width = 36
         gap = 10
-        # Calculate text width based on current font
         text_width = self.fontMetrics().horizontalAdvance(self.text())
-
-        # Total width = Switch + Gap + Text
         total_width = switch_width + gap + text_width
-        # Height is fixed at 20px (matches Manager)
         return QSize(total_width, 20)
 
     def paintEvent(self, event):
@@ -50,10 +74,8 @@ class ToggleSwitch(QCheckBox):
         # --- 1. Draw Toggle Switch ---
         switch_width = 36
         switch_height = 20
-        # The switch sits at the left-most side (x=0)
         switch_rect = QRect(0, 0, switch_width, switch_height)
 
-        # Draw background track
         p.setBrush(bar_color)
         p.setPen(Qt.NoPen)
         p.drawRoundedRect(switch_rect, 10, 10)
@@ -73,9 +95,8 @@ class ToggleSwitch(QCheckBox):
 
         # --- 2. Draw Text Label (if present) ---
         if self.text():
-            text_x = switch_width + 10  # 10px gap
+            text_x = switch_width + 10
             p.setPen(QColor("#E0E0E0"))
-            # Vertically center the text
             p.drawText(text_x, 0, self.width() - text_x, self.height(),
                        Qt.AlignLeft | Qt.AlignVCenter, self.text())
 
@@ -85,12 +106,12 @@ class ToggleSwitch(QCheckBox):
 class CardFrame(QFrame):
     """
     A styling wrapper that replaces QGroupBox.
-    - Uses setObjectName("Card") to match Manager styling logic.
+    Now supports Manager-style add_row() for automatic help icon placement.
     """
 
-    def __init__(self, title, layout_to_wrap):
+    def __init__(self, title, layout_to_wrap=None):
         super().__init__()
-        self.setObjectName("Card")  # Critical for CSS
+        self.setObjectName("Card")
 
         # Main Layout of the Card
         self.main_layout = QVBoxLayout(self)
@@ -99,11 +120,59 @@ class CardFrame(QFrame):
 
         # 1. Title Label
         self.lbl_title = QLabel(title)
-        self.lbl_title.setObjectName("CardTitle")  # Critical for CSS
+        self.lbl_title.setObjectName("CardTitle")
         self.main_layout.addWidget(self.lbl_title)
 
-        # 2. Add the content layout
-        self.main_layout.addLayout(layout_to_wrap)
+        # 2. Content Grid (for add_row support)
+        self.grid = QGridLayout()
+        self.grid.setSpacing(10)
+        self.grid.setColumnStretch(2, 1)  # Column 2 is spacer
+        self.main_layout.addLayout(self.grid)
+
+        self._current_row = 0
+
+        # 3. If a pre-built layout was passed (legacy support), add it
+        if layout_to_wrap:
+            self.main_layout.addLayout(layout_to_wrap)
+
+    def add_row(self, label_text, widget, help_text=None, stretch_input=False):
+        """
+        Manager-style row builder.
+        Adds: [Label + HelpIcon] | [Widget] | [Spacer]
+        """
+        # Label + Icon Container
+        label_container = QWidget()
+        label_layout = QHBoxLayout(label_container)
+        label_layout.setContentsMargins(0, 0, 0, 0)
+        label_layout.setSpacing(6)
+
+        lbl = QLabel(label_text)
+        lbl.setObjectName("FieldLabel")
+        label_layout.addWidget(lbl)
+
+        if help_text:
+            help_icon = HelpIcon(help_text)
+            label_layout.addWidget(help_icon)
+
+        label_layout.addStretch()
+
+        self.grid.addWidget(label_container, self._current_row, 0)
+
+        if stretch_input:
+            # Span across Column 1 AND 2 (Full Width)
+            self.grid.addWidget(widget, self._current_row, 1, 1, 2)
+        else:
+            # Widget in Col 1, Col 2 is spacer
+            if not widget.maximumWidth() < 16777215:
+                widget.setMinimumWidth(200)
+            self.grid.addWidget(widget, self._current_row, 1)
+
+        self._current_row += 1
+
+    def add_full_width(self, widget):
+        """Span all 3 columns."""
+        self.grid.addWidget(widget, self._current_row, 0, 1, 3)
+        self._current_row += 1
 
 
 
@@ -170,16 +239,14 @@ class StatusIndicator(QFrame):
         self.label.setProperty("class", "status-title")
 
         # ====== STATUS TEXT WITH CIRCLE (ONLINE/OFFLINE) ======
-        # Container for status text + circle
         status_container = QWidget()
         status_container.setProperty("class", "status-container")
         status_layout = QHBoxLayout(status_container)
         status_layout.setContentsMargins(0, 0, 0, 0)
         status_layout.setSpacing(5)
 
-        # Circle/Light indicator
         self.light = QLabel()
-        self.light.setFixedSize(12, 12)  # Smaller circle (was 14x14)
+        self.light.setFixedSize(12, 12)
         self.light.setProperty("class", "status-light")
 
         self.status_lbl = QLabel("WAITING")

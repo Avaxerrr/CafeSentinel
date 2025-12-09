@@ -24,6 +24,9 @@
         <!-- Arrow for dropdown and spinbox -->
         <file alias="arrow_up.svg">assets/icons/arrow_up.svg</file>
         <file alias="arrow_down.svg">assets/icons/arrow_down.svg</file>
+
+        <!-- Mini Help Icon -->
+        <file alias="mini-help.svg">assets/icons/mini-help.svg</file>
     </qresource>
 
     <!-- Font -->
