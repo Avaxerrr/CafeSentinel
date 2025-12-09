@@ -1,3 +1,7 @@
+Alright, here's the **COMPLETE UPDATED DOCUMENTATION** with all the new features properly integrated:
+
+***
+
 # CafeSentinel - Technical Documentation
 
 ## Overview
@@ -22,6 +26,7 @@ CafeSentinel.exe (Main Application)
 SentinelService.exe (Watchdog)
 ├─ Monitors CafeSentinel.exe process
 ├─ Restarts main app on crash/termination
+├─ Logs lifecycle events to info.log
 └─ Runs with elevated privileges
 ```
 
@@ -118,6 +123,43 @@ Main monitoring thread that performs continuous network surveillance.
 4. Process state changes and trigger notifications
 5. Handle routine screenshot capture if interval elapsed
 6. Sleep for configured interval and repeat
+
+#### Startup Configuration Snapshot
+
+On monitoring start, the worker logs a concise snapshot of its active configuration, including the monitoring interval in seconds and the number of PC targets in the current scan range. This `[SYSTEM]` log entry appears once per process start and helps correlate historical logs with the exact runtime settings that were in effect at the time (for example, changes to scan interval or PC count).
+
+**Example Log:**
+```
+[2025-12-09 19:27:28] [SYSTEM] Settings Loaded: Interval=2s, Targets=100 PCs
+```
+
+### SentinelService.exe (Watchdog)
+
+Monitors the main CafeSentinel application and ensures continuous operation.
+
+**Core Responsibilities:**
+- Detects when CafeSentinel.exe terminates
+- Automatically restarts the main application on unexpected termination
+- Runs with elevated admin privileges
+- Operates independently of the main application
+
+#### Process Lifecycle Logging
+
+The watchdog now writes lightweight lifecycle events directly to the main `info.log` file using a raw append strategy instead of the primary logging class. Each time the main application is started, stopped, or restarted, a `[WATCHDOG]` log line is emitted with a timestamp and description of the event.
+
+Exit codes are interpreted to distinguish user‑initiated shutdowns from abnormal terminations. A clean exit (`code 0`) and setup cancellation (`code 100`) are logged as intentional stops, and the watchdog terminates itself without relaunching the main app. Any other non‑zero exit code is treated as an unexpected termination, logged with the code value, and triggers an automatic restart after a short delay.
+
+**Exit Code Behavior:**
+- **Code 0 (Clean Exit):** User closed the app intentionally with admin password → Watchdog stops, no restart
+- **Code 100 (Setup Cancelled):** User cancelled first-run setup → Watchdog stops, no restart
+- **Other Codes:** Application crashed or was forcibly terminated → Watchdog logs the exit code and restarts the app after 2 seconds
+
+**Example Logs:**
+```
+[2025-12-09 19:00:01] [WATCHDOG] Starting CafeSentinel process (spawn mode).
+[2025-12-09 19:00:03] [WATCHDOG] CafeSentinel exited cleanly (Code 0). Stopping watchdog.
+[2025-12-09 19:15:22] [WATCHDOG] CafeSentinel terminated unexpectedly (Exit Code -1073741819). Restarting...
+```
 
 ### SystemTrayController (controllers/system_tray_app.py)
 
@@ -516,9 +558,9 @@ Each log line follows structured categorized format:
 
 | Category | Usage |
 |----------|-------|
-| `SYSTEM` | Application startup, shutdown, initialization, API server events |
+| `SYSTEM` | Application startup, shutdown, initialization, API server events, configuration snapshots |
 | `CONFIG` | Configuration loading, saving, validation, hot-reload events |
-| `NETWORK` | Network scanning, connectivity checks, target validation |
+| `NETWORK` | Network scanning, connectivity checks, target validation, jitter detection |
 | `ALERT` | Network outages, failures, incidents started |
 | `RECOVERY` | Network restoration, incident resolution |
 | `DISCORD` | Discord webhook notifications, delivery status |
@@ -527,19 +569,24 @@ Each log line follows structured categorized format:
 | `SETTINGS` | Settings dialog operations, local configuration changes |
 | `STEALTH` | Stealth mode toggle events |
 | `LOGGER` | Log rotation, retention cleanup, archive operations |
-| `WATCHDOG` | Watchdog process monitoring, revival attempts |
+| `WATCHDOG` | Watchdog process lifecycle events, exit code interpretation, restart operations |
 | `ERROR` | Exceptions, failures, error conditions |
 | `ARCHIVE` | Archive file operations (API deletion, retrieval) |
 
 **Example Log Lines:**
 ```
 [2025-12-09 05:23:15] [SYSTEM] Kernel thread attached (Singleton Mode)
+[2025-12-09 05:23:15] [SYSTEM] Settings Loaded: Interval=2s, Targets=100 PCs
 [2025-12-09 05:23:16] [CONFIG] Updated successfully
 [2025-12-09 05:23:45] [ALERT] Router DOWN | Timer Started
+[2025-12-09 05:23:50] [NETWORK] Router jitter detected (4.2s) - Below threshold (10s).
 [2025-12-09 05:24:12] [RECOVERY] Router Restored | Duration: 0:00:27
 [2025-12-09 05:25:00] [TASK] Capturing Routine Screenshot (60m)
+[2025-12-09 05:25:01] [ERROR] Screenshot Capture Failed: No image data returned (Monitor off?)
 [2025-12-09 06:00:00] [LOGGER] Cleaned up 5 old log files (Retention: 30 days)
 [2025-12-09 08:30:15] [STEALTH] Entering Stealth Mode. Tray icons hidden.
+[2025-12-09 19:00:01] [WATCHDOG] Starting CafeSentinel process (spawn mode).
+[2025-12-09 19:00:03] [WATCHDOG] CafeSentinel exited cleanly (Code 0). Stopping watchdog.
 ```
 
 ### Smart API Log Serving
@@ -653,6 +700,24 @@ Multi-stage verification prevents false positive alerts.
 - Distinguishes local network issues from ISP problems
 - Reduces notification spam during major outages
 
+#### Jitter Visibility Below Incident Threshold
+
+Short‑lived connectivity drops that recover before the configured `min_incident_duration_seconds` are now explicitly logged as jitter events instead of being silently ignored. When a component such as the router, server, or ISP target goes down and then recovers within this threshold, the system records a `[NETWORK]` log entry indicating the affected component and the exact outage duration, while still suppressing full incident creation and Discord alerts. This provides visibility into unstable links without generating alert noise.
+
+**Example Jitter Logs:**
+```
+[2025-12-09 14:22:10] [ALERT] ISP DOWN | Timer Started
+[2025-12-09 14:22:14] [NETWORK] ISP jitter detected (3.8s) - Below threshold (10s).
+[2025-12-09 15:45:30] [ALERT] Router DOWN | Timer Started
+[2025-12-09 15:45:36] [NETWORK] Router jitter detected (5.2s) - Below threshold (10s).
+```
+
+**Benefits:**
+- Reveals intermittent network instability that doesn't trigger full outages
+- Helps identify degraded ISP service quality
+- Provides data for troubleshooting connectivity issues
+- Logs can be used as evidence when reporting issues to ISPs
+
 ### PC Occupancy Tracking
 
 Monitors range of client PCs for online/offline state.
@@ -696,6 +761,24 @@ Captures primary monitor using mss library with post-processing.
 - Smaller file sizes reduce upload time and Discord storage
 - Maintains transparency support (though not used currently)
 
+#### Asynchronous Uploads
+
+Routine and incident screenshots are now uploaded asynchronously using background threads so that the main monitoring loop never blocks on HTTP network operations. The worker captures the image in the main thread (fast, <100ms), then hands the in‑memory WebP bytes to a dedicated upload thread that sends the data to Discord webhooks (slow, 2-5 seconds). If capture fails and no image data is produced, an error log entry is written instead of silently skipping the upload.
+
+**Benefits:**
+- Prevents monitoring delays during Discord uploads
+- Eliminates "Slow Scan Loop" warnings caused by screenshot uploads
+- Maintains consistent 2-second monitoring interval even during network congestion
+- Failed captures are now logged for troubleshooting (e.g., monitor turned off)
+
+**Example Logs:**
+```
+[2025-12-09 19:28:28] [TASK] Capturing Routine Screenshot (1m)
+[2025-12-09 19:29:29] [TASK] Capturing Routine Screenshot (1m)
+[2025-12-09 19:30:15] [ERROR] Screenshot Capture Failed: No image data returned (Monitor off?)
+[2025-12-09 19:35:00] [ERROR] Incident Screenshot Failed: No image data returned
+```
+
 ### Capture Triggers
 
 **Routine Scheduled Capture:**
@@ -729,7 +812,7 @@ Screenshots sent to Discord via webhook with rich embed.
 
 **Upload Process:**
 1. Image data in memory buffer
-2. HTTP POST to webhook URL with multipart/form-data
+2. Background thread performs HTTP POST to webhook URL with multipart/form-data
 3. Embed includes: timestamp, shop name, trigger type
 4. File attachment: `screenshot.webp`
 5. Color coding: blue (routine), green (incident recovery)
@@ -1053,10 +1136,11 @@ All file operations in application use ResourceManager for path resolution.
 
 ### Network Monitoring
 
-- Ping failures under minimum incident duration ignored
+- Ping failures under minimum incident duration ignored but logged as jitter
 - Internet verification requires both primary and secondary target failure
 - PC state changes require stability period before confirmation
 - SessionManager freezes state during network outages to prevent false alerts
+- Jitter events logged to provide visibility into transient connectivity issues
 
 ### File System
 
@@ -1074,6 +1158,8 @@ All file operations in application use ResourceManager for path resolution.
 - Log format includes full timestamp and structured categories
 - All log messages sanitized to prevent information disclosure
 - Retention cleanup runs only on startup, not during runtime
+- Watchdog lifecycle events written using raw append to avoid dependency conflicts
+- Screenshot capture failures logged for troubleshooting
 
 ## Critical Configuration Requirements
 
@@ -1102,6 +1188,16 @@ SessionManager relies on exact field names in configuration.
 
 ***
 
-**Document Version:** 2.0  
-**Last Updated:** December 9, 2025  
-**Changes:** Added Phase 1-4 logging system improvements (rotation, retention, smart API serving, categorization)
+**Document Version:** 2.1  
+**Last Updated:** December 10, 2025  
+**Changes in 2.1:**
+- Added asynchronous screenshot upload architecture with threading
+- Added watchdog lifecycle logging with exit code interpretation
+- Added network jitter visibility for sub-threshold outages
+- Added startup configuration snapshot logging
+- Updated log categories to include WATCHDOG events
+- Documented screenshot capture failure logging
+
+***
+
+There you go! Complete updated documentation with all the new features properly integrated.
