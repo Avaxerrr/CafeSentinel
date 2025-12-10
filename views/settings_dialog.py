@@ -61,10 +61,11 @@ class SettingsDialog(QDialog):
         self.sidebar.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Add Navigation Items
-        self.add_nav_item("Network", ":/icons/router_on")
-        self.add_nav_item("Monitoring", ":/icons/pc_on")
-        self.add_nav_item("Discord", ":/icons/server_on")
-        self.add_nav_item("system-settings", ":/icons/system-settings")
+        self.add_nav_item("Network", ":/icons/nav_network")
+        self.add_nav_item("Monitoring", ":/icons/nav_monitoring")
+        self.add_nav_item("Discord", ":/icons/nav_discord")
+        self.add_nav_item("System Settings", ":/icons/nav_system")
+
 
         # --- Right Content Stack ---
         self.pages_stack = QStackedWidget()

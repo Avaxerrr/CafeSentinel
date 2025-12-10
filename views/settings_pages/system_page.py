@@ -24,7 +24,7 @@ class SystemPage(BaseSettingsPage):
         layout.addWidget(system_card)
 
         # --- Maintenance Card ---
-        maintenance_card = CardFrame("Maintenance & Hygiene")
+        maintenance_card = CardFrame("Data Management")
 
         # Log Retention
         self.log_retention = QSpinBox()
@@ -33,7 +33,7 @@ class SystemPage(BaseSettingsPage):
         self.log_retention.setToolTip("Automatically delete log files older than this number of days.")
 
         maintenance_card.add_row(
-            "Log Retention",
+            "Log Retention Period",
             self.log_retention,
             "How many days to keep historical logs in the 'probes' folder.\nFiles older than this will be deleted on startup."
         )

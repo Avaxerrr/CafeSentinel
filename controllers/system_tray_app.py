@@ -95,13 +95,30 @@ class SystemTrayController(QObject):
 
         # 4. Tray Icons
         self.trays = {
-            "router": {"obj": QSystemTrayIcon(), "name": "Router", "icon_ok": QIcon(":/icons/router_ok"),
-                       "icon_bad": QIcon(":/icons/router_bad")},
-            "server": {"obj": QSystemTrayIcon(), "name": "Server", "icon_ok": QIcon(":/icons/server_ok"),
-                       "icon_bad": QIcon(":/icons/server_bad")},
-            "internet": {"obj": QSystemTrayIcon(), "name": "Internet", "icon_ok": QIcon(":/icons/net_ok"),
-                         "icon_bad": QIcon(":/icons/net_bad")},
-            "clients": {"obj": QSystemTrayIcon(), "name": "Active Clients", "icon_ok": None, "icon_bad": None}
+            "router": {
+                "obj": QSystemTrayIcon(),
+                "name": "Router",
+                "icon_ok": QIcon(":/icons/router_white"),
+                "icon_bad": QIcon(":/icons/router_red")
+            },
+            "server": {
+                "obj": QSystemTrayIcon(),
+                "name": "Server",
+                "icon_ok": QIcon(":/icons/server_white"),
+                "icon_bad": QIcon(":/icons/server_red")
+            },
+            "internet": {
+                "obj": QSystemTrayIcon(),
+                "name": "Internet",
+                "icon_ok": QIcon(":/icons/internet_white"),
+                "icon_bad": QIcon(":/icons/internet_red")
+            },
+            "clients": {
+                "obj": QSystemTrayIcon(),
+                "name": "Active Clients",
+                "icon_ok": None,
+                "icon_bad": None
+            }
         }
 
         # 5. Init Icons

@@ -52,7 +52,7 @@ def main():
     from PySide6.QtGui import QFontDatabase, QFont
     import resources_rc  # This imports the compiled QRC
 
-    font_id = QFontDatabase.addApplicationFont(":/fonts/SUSE-VariableFont_wght.ttf")
+    font_id = QFontDatabase.addApplicationFont(":/fonts/SUSE")
 
     if font_id == -1:
         print("⚠️ WARNING: Failed to load SUSE font from QRC. Falling back to default.")

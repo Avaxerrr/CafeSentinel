@@ -20,7 +20,7 @@ class HelpIcon(QWidget):
         self.setToolTip(tooltip_text)
 
         self.setCursor(Qt.PointingHandCursor)
-        self.renderer = QSvgRenderer(":/icons/mini-help.svg")
+        self.renderer = QSvgRenderer(":/icons/help")
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -223,15 +223,16 @@ class StatusIndicator(QFrame):
         self.icon_lbl.setAlignment(Qt.AlignCenter)
         self.icon_lbl.setProperty("class", "status-icon")
 
-        # Load icons based on title
+        # Load icons based on title (router, server, internet)
         title_lower = title.lower()
-        icon_on = QIcon(f":/icons/{title_lower}_on")
-        icon_off = QIcon(f":/icons/{title_lower}_off")
+
+        self.icon_on = QIcon(f":/icons/{title_lower}_white")
+        self.icon_off = QIcon(f":/icons/{title_lower}_red")
 
         # Generate pixmaps from icons
         icon_size = 28
-        self.icon_on_pixmap = icon_on.pixmap(icon_size, icon_size)
-        self.icon_off_pixmap = icon_off.pixmap(icon_size, icon_size)
+        self.icon_on_pixmap = self.icon_on.pixmap(icon_size, icon_size)
+        self.icon_off_pixmap = self.icon_off.pixmap(icon_size, icon_size)
 
         # Title Label (ROUTER/SERVER/INTERNET)
         self.label = QLabel(title)

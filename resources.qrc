@@ -1,38 +1,32 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
-    <qresource prefix="/icons">
-        <!-- Tray Icons -->
-        <file alias="router_ok">assets/icons/router_ok.svg</file>
-        <file alias="router_bad">assets/icons/router_bad.svg</file>
-        <file alias="server_ok">assets/icons/server_ok.svg</file>
-        <file alias="server_bad">assets/icons/server_bad.svg</file>
-        <file alias="net_ok">assets/icons/net_ok.svg</file>
-        <file alias="net_bad">assets/icons/net_bad.svg</file>
+    <qresource prefix="icons">
+        <!-- Status Indicators (White = Online, Red = Offline) -->
+        <file alias="router_white">assets/icons/router-icon-white.svg</file>
+        <file alias="router_red">assets/icons/router-icon-red.svg</file>
 
-        <!-- PC Box Icons -->
+        <file alias="server_white">assets/icons/server-icon-white.svg</file>
+        <file alias="server_red">assets/icons/server-icon-red.svg</file>
+
+        <file alias="internet_white">assets/icons/internet-icon-white.svg</file>
+        <file alias="internet_red">assets/icons/internet-icon-red.svg</file>
+
+        <!-- PC Status -->
         <file alias="pc_on">assets/icons/pc_on.svg</file>
         <file alias="pc_off">assets/icons/pc_off.svg</file>
 
-        <!-- Status Indicator Icons -->
-        <file alias="router_on">assets/icons/router_on.svg</file>
-        <file alias="router_off">assets/icons/router_off.svg</file>
-        <file alias="server_on">assets/icons/server_on.svg</file>
-        <file alias="server_off">assets/icons/server_off.svg</file>
-        <file alias="internet_on">assets/icons/internet_on.svg</file>
-        <file alias="internet_off">assets/icons/internet_off.svg</file>
+        <!-- Navigation Sidebar -->
+        <file alias="nav_network">assets/icons/network-icon.svg</file>
+        <file alias="nav_monitoring">assets/icons/monitoring-icon.svg</file>
+        <file alias="nav_discord">assets/icons/discord-icon-white.svg</file>
+        <file alias="nav_system">assets/icons/system-settings-icon.svg</file>
 
-        <!-- Arrow for dropdown and spinbox -->
-        <file alias="arrow_up.svg">assets/icons/arrow_up.svg</file>
-        <file alias="arrow_down.svg">assets/icons/arrow_down.svg</file>
-
-        <!-- Mini Help Icon -->
-        <file alias="mini-help.svg">assets/icons/mini-help.svg</file>
-
-        <file alias="system-settings">assets/icons/system-settings.svg</file>
+        <!-- UI Elements -->
+        <file alias="help">assets/icons/mini-help-tooltip.svg</file>
+        <file alias="arrow_down">assets/icons/arrow_down.svg</file>
+        <file alias="arrow_up">assets/icons/arrow_up.svg</file>
     </qresource>
-
-    <!-- Font -->
-    <qresource prefix="/fonts">
-        <file alias="SUSE-VariableFont_wght.ttf">assets/fonts/SUSE-VariableFont_wght.ttf</file>
+    <qresource prefix="fonts">
+        <file alias="SUSE">assets/fonts/SUSE-VariableFont_wght.ttf</file>
     </qresource>
 </RCC>

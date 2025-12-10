@@ -77,7 +77,7 @@ QLabel[class="status-title"][state="online"] {
 }
 
 QLabel[class="status-title"][state="offline"] {
-    color: #FF4444;
+    color: #FF3232;
 }
 
 QLabel[class="status-light"] {
@@ -90,7 +90,7 @@ QLabel[class="status-light"][state="online"] {
 }
 
 QLabel[class="status-light"][state="offline"] {
-    background-color: #FF4444;
+    background-color: #FF3232;
 }
 
 QWidget[class="status-container"] {
@@ -110,7 +110,7 @@ QLabel[class="status-label"][state="online"] {
 }
 
 QLabel[class="status-label"][state="offline"] {
-    color: #FF4444;
+    color: #FF3232;
 }
 
 /* --- SentinelPCBox --- */
@@ -244,7 +244,7 @@ QComboBox QAbstractItemView {
 
 /* --- DROPDOWN ARROW --- */
 QComboBox::down-arrow {
-    image: url(:/icons/arrow_down.svg);
+    image: url(:/icons/arrow_down);
     width: 14px;
     height: 14px;
 }
@@ -290,13 +290,13 @@ QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
 
 /* --- SPINBOX ARROWS --- */
 QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
-    image: url(:/icons/arrow_up.svg);
+    image: url(:/icons/arrow_up);
     width: 10px;
     height: 10px;
 }
 
 QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
-    image: url(:/icons/arrow_down.svg);
+    image: url(:/icons/arrow_down);
     width: 10px;
     height: 10px;
 }
@@ -552,11 +552,13 @@ QListWidget#SettingsSidebar {
     border-right: 1px solid #2f3136;
     outline: none;              /* Remove dotted focus line */
     padding-top: 10px;
+    font-size: 14px;
+    font-weight: bold;
 }
 
 /* 2. The Sidebar Items */
 QListWidget#SettingsSidebar::item {
-    height: 45px;               /* Tall, clickable rows */
+    height: 50px;               /* Tall, clickable rows */
     padding-left: 15px;
     margin: 2px 10px;           /* Small gap on sides */
     border-radius: 4px;         /* Soft rounded corners */
@@ -605,7 +607,7 @@ QFrame#DialogHeader {
 
 QLabel#DialogTitle {
     color: #00C853;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'SUSE', sans-serif;
     font-size: 22px;
     font-weight: 700;
     padding-left: 10px;

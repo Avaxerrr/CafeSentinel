@@ -1,0 +1,19 @@
+site_name: CafeSentinel Documentation
+site_description: Technical documentation for the CafeSentinel network monitoring system
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
+
+nav:
+  - Home: index.md
+  - Monitoring: monitoring.md
+  - Configuration: configuration.md
+  - Security: security.md
+  - Logging: logging.md
+  - Features: features.md
+  - Deployment: deployment.md

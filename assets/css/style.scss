@@ -1,0 +1,48 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+/* 1. FORCE DARK MODE EVERYWHERE */
+html, body {
+  background-color: #27282c !important;
+  color: #e6e6e6 !important;
+}
+
+#main_content_wrap {
+  background-color: #27282c !important;
+  border: none !important;
+}
+
+.inner {
+  background-color: transparent !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff !important;
+}
+
+p, li, table, th, td {
+  color: #e6e6e6 !important;
+}
+
+/* 2. FIX THE WHITE CODE BLOCKS */
+pre, code {
+  background-color: #1e1e1e !important; /* Slightly darker than body for contrast */
+  color: #dcdcdc !important;             /* Light grey text for code */
+  border: 1px solid #444 !important;     /* Subtle dark border */
+  text-shadow: none !important;
+}
+
+/* Target the specific highlight container used by Jekyll */
+.highlight {
+  background-color: #1e1e1e !important;
+  border-radius: 5px;
+}
+
+/* Ensure inline code `like this` is also dark */
+p code, li code {
+  background-color: #383838 !important;
+  border: 1px solid #555 !important;
+  padding: 2px 4px;
+}
