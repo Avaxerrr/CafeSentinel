@@ -1,4 +1,4 @@
-Alright, here's the **COMPLETE UPDATED DOCUMENTATION** with all the new features properly integrated:
+Here is the **COMPLETE UPDATED DOCUMENTATION (v2.2)** with all the new features we added today properly integrated:
 
 ***
 
@@ -69,7 +69,7 @@ CafeSentinel/
 │       ├── network_page.py          # Network settings tab
 │       ├── monitoring_page.py       # Monitoring settings tab
 │       ├── discord_page.py          # Discord settings tab
-│       └── system_page.py           # System settings tab (log retention)
+│       └── system_page.py           # System settings tab (stealth, tray, retention)
 ├── assets/icons/                    # Icon resources
 ├── api_server.py                    # Flask REST API server
 ├── interface.py                     # Main application entry point
@@ -133,6 +133,58 @@ On monitoring start, the worker logs a concise snapshot of its active configurat
 [2025-12-09 19:27:28] [SYSTEM] Settings Loaded: Interval=2s, Targets=100 PCs
 ```
 
+#### Screenshot Optimization
+
+The screenshot capture system now includes performance optimizations to eliminate unnecessary work:
+
+**Early Return Check:**
+- Before checking elapsed time, the worker first verifies `screenshot_enabled` flag from configuration
+- If screenshots are disabled, function returns immediately (< 1 microsecond)
+- Prevents CPU-intensive image capture attempts when feature is turned off
+- Eliminates "Monitor off?" errors in logs when screenshots are intentionally disabled
+
+**Decoupled Architecture:**
+- Screenshot capture remains independent of Discord notification system
+- Screenshots are taken regardless of Discord webhook configuration
+- Allows future platform integrations (Telegram, Email, Local Storage) without code changes
+- DiscordNotifier decides whether to send based on its own configuration
+
+**Performance Impact:**
+- Disabled screenshots no longer contribute to loop timing
+- Eliminates false positive "Slow Scan Loop" warnings from failed capture attempts
+- Reduces disk I/O from error logging when screenshots are disabled
+
+#### Smart Slow Loop Detection
+
+The monitoring loop now intelligently distinguishes between intentional delays and actual performance problems:
+
+**Verification Tracking:**
+- Worker tracks when verification retries occur (network target double-checking)
+- Sets `verification_occurred` flag when `_verify_component()` is called
+- Verification includes intentional sleep period (`retry_delay_seconds`)
+
+**Adaptive Warning Logic:**
+- If loop duration exceeds `(interval + 1.0)` seconds **AND** no verification occurred → Log warning
+- If loop duration exceeds threshold **BUT** verification occurred → Suppress warning
+- Prevents false positive alerts during normal retry operations
+
+**Benefits:**
+- Reduces log noise during network instability
+- "Slow Scan Loop" warnings now indicate real performance issues (bugs, hung threads)
+- Verification delays are expected behavior, not performance problems
+- Helps identify actual bottlenecks that need investigation
+
+**Example Scenarios:**
+```
+# Scenario 1: Network flicker triggers verification (1s sleep)
+# Old: Logs "Slow Loop" warning (false positive)
+# New: Silently continues (expected behavior)
+
+# Scenario 2: Screenshot capture hangs for 5 seconds
+# Old: Logs "Slow Loop" warning (correct)
+# New: Logs "Slow Loop" warning (correct, no change)
+```
+
 ### SentinelService.exe (Watchdog)
 
 Monitors the main CafeSentinel application and ensures continuous operation.
@@ -174,13 +226,103 @@ Application controller that initializes and coordinates all services.
 - Manages system tray context menu including settings dialog access
 - Initializes logging system and executes retention cleanup on startup
 
+**System Tray Architecture:**
+
+The tray controller uses a strict `TrayItem` dataclass to manage icon lifecycle and state:
+
+```python
+@dataclass
+class TrayItem:
+    """Represents a single system tray icon with lifecycle management."""
+    name: str                           # Identifier (router, server, internet, clients)
+    default_icon: str                   # Resource path for default/green icon
+    alert_icon: str                     # Resource path for red/alert icon
+    tooltip_base: str                   # Base tooltip text
+    icon_obj: QSystemTrayIcon = None    # Qt tray icon instance
+    visible: bool = True                # Visibility state
+```
+
+**Benefits of TrayItem Dataclass:**
+- Type safety: IDE autocomplete and type checking work correctly
+- Clear structure: All tray icon properties grouped together
+- Lifecycle management: Tracks Qt object references safely
+- Eliminates dictionary key typos that cause runtime errors
+- Makes code more maintainable and refactor-safe
+
+**Tray Icon Layout:**
+
+Icons are spawned in **reverse order** so they appear left-to-right in the system tray:
+
+```
+Visual Order (Left to Right):
+[Clients] [Internet] [Router] [Server] [System Arrow →]
+
+Spawn Sequence (Reverse):
+1. Server
+2. Router
+3. Internet
+4. Clients (spawned last, appears leftmost)
+```
+
+**Rationale for Reversed Layout:**
+- Windows system tray displays newest icons on the left
+- Client count changes most frequently (dynamic information)
+- Placing clients leftmost makes the active count immediately visible
+- Infrastructure icons (router/server/internet) are less dynamic, positioned right
+
 **Stealth Mode (Headless Operation):**
+
 - **Implementation:** Configurable via `env_state` boolean in `system_settings`.
 - **Behavior:**
   - **Enabled (`True`):** Application runs normally but hides all system tray icons.
-  - **Disabled (`False`):** Standard system tray icons are visible.
+  - **Disabled (`False`):** Icons displayed based on individual visibility settings.
 - **Persistence:** App is configured with `setQuitOnLastWindowClosed(False)` to ensure the process continues running even without visible UI elements.
 - **Toggle Mechanism:** Can be toggled remotely via API (Manager App) or locally via Settings Dialog (if accessible). Updates apply immediately via hot-reload.
+- **Override Priority:** Stealth Mode is a master switch that overrides individual icon visibility settings.
+
+**Granular Tray Icon Visibility:**
+
+Users can now control which specific icons appear in the system tray independently:
+
+**Individual Icon Toggles:**
+- **Router Icon:** Show/hide router connection status
+- **Server Icon:** Show/hide server connection status
+- **Internet Icon:** Show/hide ISP connection status
+- **Clients Icon:** Show/hide active client PC count
+
+**Configuration Location:**
+```json
+"system_settings": {
+  "tray_visibility": {
+    "router": true,
+    "server": true,
+    "internet": true,
+    "clients": true
+  }
+}
+```
+
+**Visibility Hierarchy:**
+1. **Stealth Mode (Master Override):** If `env_state = true`, ALL icons hidden regardless of individual settings
+2. **Individual Toggles:** If `env_state = false`, each icon respects its own `tray_visibility` setting
+
+**Validation Rule:**
+- At least one icon must remain visible when Stealth Mode is disabled
+- Enforced by ConfigManager validation and Settings Dialog UI
+- Prevents "ghost app" state where application runs but has no visible interface
+- API and local settings both enforce this rule
+
+**Use Cases:**
+- Minimize tray clutter by hiding less critical icons
+- Focus on specific monitoring aspects (e.g., only show Clients count)
+- Customize per-location deployment (different shops need different visibility)
+- Maintain awareness of app status without overwhelming tray area
+
+**Hot-Reload Support:**
+- Visibility changes apply immediately without restart
+- SystemTrayController listens to ConfigManager signals
+- Icons show/hide dynamically based on new settings
+- Smooth transition without application flicker
 
 **System Tray Icons:**
 - Router: green (online) / red (offline)
@@ -209,6 +351,27 @@ Singleton class that manages all configuration access with encryption and thread
 - Fernet symmetric encryption (AES-128 in CBC mode with timestamp)
 - Config stored as encrypted JSON string
 - Decryption happens in-memory only, never written as plaintext
+
+**Configuration Validation:**
+
+ConfigManager enforces strict validation rules to prevent invalid states:
+
+**Tray Visibility Validation:**
+- Checks if at least one icon is enabled when `env_state` is False
+- Validation occurs in `_validate_config()` method before saving
+- Protects both API and local Settings Dialog from creating invalid configs
+- Returns error message if all icons would be disabled: *"At least one tray icon must be enabled!"*
+
+**Validation Flow:**
+1. User/API submits new configuration
+2. ConfigManager calls `_validate_config()`
+3. If validation fails, update is rejected with error message
+4. If validation passes, config is encrypted and saved
+5. Hot-reload signal emitted to apply changes
+
+**Protected Endpoints:**
+- POST `/api/config` → Returns 400 error if validation fails
+- Local Settings Dialog → Shows warning and prevents save
 
 **Hot-Reload Support:**
 - Exposes `check_and_clear_dirty()` method for worker thread polling
@@ -262,9 +425,15 @@ REST API server for remote configuration management and log access.
 
 **Request/Response Flow:**
 - All responses use JSON format
-- Config updates validated before applying (required keys, value ranges)
+- Config updates validated before applying (required keys, value ranges, tray visibility rules)
 - Automatic backup created before each config modification
 - Errors return appropriate HTTP status codes (400, 403, 404, 500)
+
+**Generic Config Handling:**
+- API does not inspect specific config fields
+- Accepts any valid JSON payload and passes to ConfigManager
+- ConfigManager handles all validation logic centrally
+- This design allows new config fields (like `tray_visibility`) to work automatically without API changes
 
 **Security Considerations:**
 - No authentication currently implemented (relies on network isolation)
@@ -326,10 +495,31 @@ Configuration stored as encrypted file `cscf.dll` in application directory.
   },
   "system_settings": {
     "env_state": false,
-    "log_retention_days": 30
+    "log_retention_days": 30,
+    "tray_visibility": {
+      "router": true,
+      "server": true,
+      "internet": true,
+      "clients": true
+    }
   }
 }
 ```
+
+**System Settings Section:**
+
+- **env_state:** Boolean toggle for Stealth Mode (master icon visibility override)
+- **log_retention_days:** Integer (1-365) specifying how long to keep archived logs
+- **tray_visibility:** Dictionary of boolean flags for each icon type
+  - **router:** Show/hide router status icon
+  - **server:** Show/hide server status icon
+  - **internet:** Show/hide internet status icon
+  - **clients:** Show/hide active client count icon
+
+**Field Validation:**
+- All tray_visibility booleans cannot be False simultaneously (unless env_state is True)
+- log_retention_days must be between 1 and 365
+- Missing tray_visibility fields default to True (visible)
 
 ### Configuration Access Methods
 
@@ -352,6 +542,7 @@ Configuration stored as encrypted file `cscf.dll` in application directory.
 - Screenshot quality: 1-100
 - Monitor interval: 1-60 seconds
 - Log retention: 1-365 days
+- At least one tray icon must be visible (when Stealth Mode disabled)
 - All required sections must be present
 - Invalid configurations rejected with error message
 
@@ -370,7 +561,7 @@ Configuration changes apply without application restart through two mechanisms:
 **Mechanism 1: Qt Signals (Same-Thread)**
 - ConfigManager emits `sig_config_changed` signal when config updates
 - GUI components connected to this signal update immediately
-- Used for components running in main Qt thread (e.g., SystemTrayController for Stealth Mode updates)
+- Used for components running in main Qt thread (e.g., SystemTrayController for tray icon visibility updates)
 
 **Mechanism 2: Dirty Flag Polling (Cross-Thread)**
 - Worker thread polls ConfigManager.check_and_clear_dirty() each cycle
@@ -575,18 +766,18 @@ Each log line follows structured categorized format:
 
 **Example Log Lines:**
 ```
-[2025-12-09 05:23:15] [SYSTEM] Kernel thread attached (Singleton Mode)
-[2025-12-09 05:23:15] [SYSTEM] Settings Loaded: Interval=2s, Targets=100 PCs
-[2025-12-09 05:23:16] [CONFIG] Updated successfully
-[2025-12-09 05:23:45] [ALERT] Router DOWN | Timer Started
-[2025-12-09 05:23:50] [NETWORK] Router jitter detected (4.2s) - Below threshold (10s).
-[2025-12-09 05:24:12] [RECOVERY] Router Restored | Duration: 0:00:27
-[2025-12-09 05:25:00] [TASK] Capturing Routine Screenshot (60m)
-[2025-12-09 05:25:01] [ERROR] Screenshot Capture Failed: No image data returned (Monitor off?)
-[2025-12-09 06:00:00] [LOGGER] Cleaned up 5 old log files (Retention: 30 days)
-[2025-12-09 08:30:15] [STEALTH] Entering Stealth Mode. Tray icons hidden.
-[2025-12-09 19:00:01] [WATCHDOG] Starting CafeSentinel process (spawn mode).
-[2025-12-09 19:00:03] [WATCHDOG] CafeSentinel exited cleanly (Code 0). Stopping watchdog.
+[2025-12-10 14:30:15] [SYSTEM] Kernel thread attached (Singleton Mode)
+[2025-12-10 14:30:15] [SYSTEM] Settings Loaded: Interval=2s, Targets=100 PCs
+[2025-12-10 14:30:16] [CONFIG] Updated successfully
+[2025-12-10 14:30:45] [ALERT] Router DOWN | Timer Started
+[2025-12-10 14:30:50] [NETWORK] Router jitter detected (4.2s) - Below threshold (10s).
+[2025-12-10 14:31:12] [RECOVERY] Router Restored | Duration: 0:00:27
+[2025-12-10 14:32:00] [TASK] Capturing Routine Screenshot (60m)
+[2025-12-10 14:32:01] [ERROR] Screenshot Capture Failed: No image data returned (Monitor off?)
+[2025-12-10 15:00:00] [LOGGER] Cleaned up 5 old log files (Retention: 30 days)
+[2025-12-10 15:30:15] [STEALTH] Entering Stealth Mode. Tray icons hidden.
+[2025-12-10 19:00:01] [WATCHDOG] Starting CafeSentinel process (spawn mode).
+[2025-12-10 19:00:03] [WATCHDOG] CafeSentinel exited cleanly (Code 0). Stopping watchdog.
 ```
 
 ### Smart API Log Serving
@@ -785,10 +976,12 @@ Routine and incident screenshots are now uploaded asynchronously using backgroun
 - Interval set via `screenshot_settings.interval_minutes`
 - Timer tracks time since last capture
 - Triggers when interval elapsed
+- **Optimization:** If `screenshot_settings.enabled` is False, function returns immediately without any work
 - Continues until disabled or privacy mode enabled
 
 **Incident Documentation:**
 - Automatically captured when network outage resolves
+- **Optimization:** Only captured if `screenshot_settings.enabled` is True
 - Provides visual evidence of recovery time
 - Includes network status in Discord embed
 - Helps diagnose issues visible on client screens
@@ -801,7 +994,7 @@ Routine and incident screenshots are now uploaded asynchronously using backgroun
 
 ### Settings
 
-- **Enabled:** Master toggle for screenshot system
+- **Enabled:** Master toggle for screenshot system (respects decoupled architecture)
 - **Interval:** Minutes between routine captures (1-1440)
 - **Quality:** WebP compression quality (1-100, higher = better quality/larger file)
 - **Resize Ratio:** Scale factor (1.0 = full size, 0.5 = half dimensions, 0.25 = quarter)
@@ -816,6 +1009,13 @@ Screenshots sent to Discord via webhook with rich embed.
 3. Embed includes: timestamp, shop name, trigger type
 4. File attachment: `screenshot.webp`
 5. Color coding: blue (routine), green (incident recovery)
+
+**Decoupled Design:**
+- Screenshot capture independent of Discord configuration
+- Images are taken based on `screenshot_settings.enabled` flag only
+- DiscordNotifier checks `discord_settings.enabled` before sending
+- Allows future platform integrations without changing capture logic
+- If Discord is disabled, screenshots are captured then discarded (minimal waste)
 
 ## Discord Integration
 
@@ -925,15 +1125,22 @@ Four-tab layout covering all configuration sections.
 - Three webhook URLs: Alerts, Occupancy, Screenshots
 
 **System Tab:**
-- Stealth Mode: Enable/disable system tray icons
+- Stealth Mode: Enable/disable all system tray icons (master override)
+- Tray Icon Visibility: Individual toggles for Router, Server, Internet, Clients icons
 - Log Retention: Days to keep archived logs (1-365)
+
+**Tray Visibility UI:**
+- Four toggle switches displayed horizontally
+- Real-time validation: Prevents disabling all icons when Stealth Mode is off
+- Warning message shown if user attempts invalid configuration
+- Save button disabled until at least one icon enabled
 
 ### Save Process
 
 1. User modifies settings in form fields
 2. Clicks "Save Changes" button
 3. Form data collected into config dictionary
-4. ConfigManager validates configuration
+4. ConfigManager validates configuration (including tray visibility rules)
 5. If valid: Encrypt, save to `cscf.dll`, trigger hot-reload
 6. If invalid: Display error message, prevent save
 7. Success dialog confirms changes applied
@@ -1111,93 +1318,34 @@ config_path = ResourceManager.get_resource_path("cscf.dll")
 log_path = ResourceManager.get_resource_path("info.log")
 ```
 
-All file operations in application use ResourceManager for path resolution.
+All file I/O operations must use `ResourceManager.get_resource_path()` to ensure portability between development and production environments.
 
-## Known Behaviors
+### Fonts and Icons
 
-### Application Behavior
+**Qt Resource System:**
+- Resources compiled into `resources_rc.py`
+- Avoids distributing loose image files
+- Icons accessed via `:icons/router_green.png` syntax
+- Font (SuSE-Regular) loaded from memory resource at runtime
 
-- First run displays setup wizard requiring admin and privacy passwords
-- Config file auto-created with defaults if missing
-- Log retention cleanup executes automatically on startup
-- Screenshot capture requires at least one monitor connected
-- Network monitoring requires raw socket permissions (admin rights)
-- Watchdog process remains running even if main app exits normally
-- API server binds to all interfaces (0.0.0.0) for network accessibility
-
-### Hot-Reload Behavior
-
-- Changes take effect within 2 seconds of config update
-- Worker thread state preserved (no restart)
-- Monitoring continues without interruption during reload
-- Invalid config rejected with error, previous config retained
-- Screenshot timer resets on interval change
-- Log retention changes apply on next application restart
-
-### Network Monitoring
-
-- Ping failures under minimum incident duration ignored but logged as jitter
-- Internet verification requires both primary and secondary target failure
-- PC state changes require stability period before confirmation
-- SessionManager freezes state during network outages to prevent false alerts
-- Jitter events logged to provide visibility into transient connectivity issues
-
-### File System
-
-- Encrypted files (`cscf.dll`, `cron.dll`) not readable by text editors
-- Config only decryptable on machine where created (hardware-specific key)
-- Archived logs in `probes/` automatically deleted based on retention policy
-- Archive deletion via API bypasses Windows recycle bin (permanent)
-- Log rotation happens seamlessly without data loss
-
-### Logging Behavior
-
-- Memory buffer holds last 500 lines for fast API access
-- Requests ≤500 lines served from RAM (fast)
-- Requests >500 lines read from disk (complete history)
-- Log format includes full timestamp and structured categories
-- All log messages sanitized to prevent information disclosure
-- Retention cleanup runs only on startup, not during runtime
-- Watchdog lifecycle events written using raw append to avoid dependency conflicts
-- Screenshot capture failures logged for troubleshooting
-
-## Critical Configuration Requirements
-
-### Field Name Exactness
-
-SessionManager relies on exact field names in configuration.
-
-**Required Field Names:**
-- `min_session_minutes` (not `session_stability_seconds`)
-- `batch_delay_seconds` (not `batch_delay`)
-- `hourly_snapshot_enabled` (not `hourly_snapshot`)
-
-**System Settings Field Names:**
-- `env_state` (stealth mode toggle)
-- `log_retention_days` (retention policy)
-
-**Consequence of Incorrect Names:**
-- SessionManager uses hardcoded default values
-- Configured values ignored silently
-- Unexpected behavior in occupancy tracking and notifications
-
-**Validation:**
-- ConfigManager validates structure but not field name variants
-- Manager application must send exact field names
-- Settings dialog uses exact field names in form submission
+**Custom Fonts:**
+- SuSE-Regular.ttf embedded in application
+- Loaded via QFontDatabase.addApplicationFontFromData
+- Ensures consistent typography regardless of installed system fonts
 
 ***
 
-**Document Version:** 2.1  
-**Last Updated:** December 10, 2025  
-**Changes in 2.1:**
-- Added asynchronous screenshot upload architecture with threading
-- Added watchdog lifecycle logging with exit code interpretation
-- Added network jitter visibility for sub-threshold outages
-- Added startup configuration snapshot logging
-- Updated log categories to include WATCHDOG events
-- Documented screenshot capture failure logging
+## Known Limitations
 
-***
+1. **ICMP Privileges:** Requires administrator rights to create raw sockets. Will fail or crash if run as standard user without elevation.
+2. **Windows Only:** Relies on Windows-specific `tasklist` and `taskkill` commands for process management. Not compatible with Linux/macOS.
+3. **Firewall Rules:** API Server (port 5000) may be blocked by Windows Firewall. Users must manually allow incoming connections for the Manager app to work.
+4. **Single Subnet:** Currently monitors only one /24 subnet (e.g., 192.168.1.x). Does not support VLANs or multiple subnets simultaneously.
+5. **No Authentication:** API endpoints are unauthenticated. Security relies on the local network being trusted.
 
-There you go! Complete updated documentation with all the new features properly integrated.
+## Future Roadmap
+
+- **Multi-Subnet Support:** Allow monitoring multiple VLANs (e.g., VIP room on separate subnet).
+- **Authentication:** Add JWT or API Key authentication for the Manager App.
+- **Auto-Discovery:** Implement UDP broadcast for Manager App to automatically find the CafeSentinel server.
+- **Cloud Dashboard:** Optional integration with a cloud-based dashboard for multi-branch management.
