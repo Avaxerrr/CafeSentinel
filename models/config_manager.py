@@ -67,7 +67,13 @@ class ConfigManager(QObject):
         },
         "system_settings": {
             "env_state": False,
-            "log_retention_days": 30
+            "log_retention_days": 30,
+            "tray_visibility": {
+                "router": True,
+                "server": True,
+                "internet": True,
+                "clients": True
+            }
         }
     }
 
@@ -239,7 +245,7 @@ class ConfigManager(QObject):
             return []
 
     def _validate_config(self, config):
-        """Validate config has required structure."""
+        """Validate config has required structure and logic."""
         required_keys = [
             'targets',
             'monitor_settings',
@@ -271,5 +277,24 @@ class ConfigManager(QObject):
             if not (1 <= monitor['interval_seconds'] <= 60):
                 AppLogger.log("Validation failed: Invalid monitor interval", category="CONFIG")
                 return False, "Invalid monitor interval (1-60)"
+
+        # ---Validate Tray Visibility (Prevents "Hide All" via API) ---
+        sys_settings = config.get('system_settings', {})
+        visibility = sys_settings.get('tray_visibility', {})
+
+        # If visibility dict exists, ensure at least one is True
+        if visibility:
+            any_visible = (
+                    visibility.get('router', False) or
+                    visibility.get('server', False) or
+                    visibility.get('internet', False) or
+                    visibility.get('clients', False)
+            )
+            # Only enforce if Stealth Mode is OFF.
+            # If Stealth is ON, it's okay for these to be False (since everything is hidden anyway).
+            # But to be safe and avoid confusion when Stealth is toggled OFF later, we enforce it globally.
+            if not any_visible:
+                AppLogger.log("Validation failed: All tray icons disabled", category="CONFIG")
+                return False, "At least one tray icon must be enabled!"
 
         return True, "Valid"

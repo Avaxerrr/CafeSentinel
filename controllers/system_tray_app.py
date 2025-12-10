@@ -2,9 +2,12 @@ import sys
 import os
 import subprocess
 from threading import Thread
+from dataclasses import dataclass
+from typing import Optional
+
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
 from PySide6.QtGui import QIcon, QAction, QPixmap, QPainter, QColor, QFont, QBrush
-from PySide6.QtCore import QObject, Qt, QRect, QTimer
+from PySide6.QtCore import QObject, Qt, QRect, QTimer, Signal
 
 import resources_rc
 import api_server
@@ -18,10 +21,10 @@ from views.settings_dialog import SettingsDialog
 # --- HELPER FUNCTIONS FOR WATCHDOG ---
 def is_compiled():
     """Check if running as compiled EXE (Nuitka or PyInstaller)."""
-    if getattr(sys, 'frozen', False):  # PyInstaller
+    if getattr(sys, 'frozen', False):
         return True
     try:
-        from __main__ import __compiled__  # Nuitka
+        from __main__ import __compiled__
         return True
     except ImportError:
         return False
@@ -40,20 +43,14 @@ def process_exists(process_name):
 
 def ensure_watchdog_running():
     """Checks if SentinelService is running, if not, launches it."""
-
-    # Skip in script/dev mode
     if not is_compiled():
         return
 
     watchdog_name = "SentinelService.exe"
-
-    # Already running? All good.
     if process_exists(watchdog_name):
         return
 
-    # Not running - attempt revival
     AppLogger.log(f"{watchdog_name} not found. Attempting to revive...", category="WATCHDOG")
-
     base_dir = os.path.dirname(sys.executable)
     watchdog_path = os.path.join(base_dir, "SentinelService", watchdog_name)
 
@@ -68,17 +65,23 @@ def ensure_watchdog_running():
     except Exception as e:
         AppLogger.log(f"Failed to launch service: {e}", category="ERROR")
 
+
 # -------------------------------------
+
+# --- STRICT TYPE DEFINITION ---
+@dataclass
+class TrayItem:
+    obj: QSystemTrayIcon
+    name: str
+    icon_ok: Optional[QIcon] = None
+    icon_bad: Optional[QIcon] = None
+
 
 class SystemTrayController(QObject):
     def __init__(self, app):
         super().__init__()
         self.app = app
-
-        # CRITICAL: Prevent app from quitting when tray icons are hidden
         self.app.setQuitOnLastWindowClosed(False)
-
-        # Track stealth mode state
         self.env_state = False
 
         # 1. Initialize Core Components
@@ -93,54 +96,58 @@ class SystemTrayController(QObject):
         self.menu = QMenu()
         self.setup_menu()
 
-        # 4. Tray Icons
+        # 4. Tray Icons (REVERSED ORDER: Last one spawns on the Left)
+        # Server (First -> Right) -> Router -> Internet -> Clients (Last -> Left)
         self.trays = {
-            "router": {
-                "obj": QSystemTrayIcon(),
-                "name": "Router",
-                "icon_ok": QIcon(":/icons/router_white"),
-                "icon_bad": QIcon(":/icons/router_red")
-            },
-            "server": {
-                "obj": QSystemTrayIcon(),
-                "name": "Server",
-                "icon_ok": QIcon(":/icons/server_white"),
-                "icon_bad": QIcon(":/icons/server_red")
-            },
-            "internet": {
-                "obj": QSystemTrayIcon(),
-                "name": "Internet",
-                "icon_ok": QIcon(":/icons/internet_white"),
-                "icon_bad": QIcon(":/icons/internet_red")
-            },
-            "clients": {
-                "obj": QSystemTrayIcon(),
-                "name": "Active Clients",
-                "icon_ok": None,
-                "icon_bad": None
-            }
+            "server": TrayItem(
+                obj=QSystemTrayIcon(),
+                name="Server",
+                icon_ok=QIcon(":/icons/server_white"),
+                icon_bad=QIcon(":/icons/server_red")
+            ),
+            "router": TrayItem(
+                obj=QSystemTrayIcon(),
+                name="Router",
+                icon_ok=QIcon(":/icons/router_white"),
+                icon_bad=QIcon(":/icons/router_red")
+            ),
+            "internet": TrayItem(
+                obj=QSystemTrayIcon(),
+                name="Internet",
+                icon_ok=QIcon(":/icons/internet_white"),
+                icon_bad=QIcon(":/icons/internet_red")
+            ),
+            "clients": TrayItem(
+                obj=QSystemTrayIcon(),
+                name="Active Clients",
+                icon_ok=None,
+                icon_bad=None
+            )
         }
 
         # 5. Init Icons
-        for key, data in self.trays.items():
-            tray = data["obj"]
-            tray.setContextMenu(self.menu)
-            if key == "clients":
-                tray.setIcon(self.generate_number_icon(0))
-                tray.setToolTip("Active Clients: 0")
-            else:
-                tray.setIcon(data["icon_ok"])
-                tray.setToolTip(f"{data['name']}: Initializing...")
-            tray.activated.connect(self.on_tray_icon_activated)
+        for key, item in self.trays.items():
+            # 'item' is now strictly known as a TrayItem class
+            # 'item.obj' is strictly known as QSystemTrayIcon
+            item.obj.setContextMenu(self.menu)
 
-        # Check stealth mode and show/hide icons accordingly
+            if key == "clients":
+                item.obj.setIcon(self.generate_number_icon(0))
+                item.obj.setToolTip("Active Clients: 0")
+            else:
+                if item.icon_ok:
+                    item.obj.setIcon(item.icon_ok)
+                item.obj.setToolTip(f"{item.name}: Initializing...")
+
+            item.obj.activated.connect(self.on_tray_icon_activated)
+
         self.apply_stealth_mode()
 
         # 6. Worker Signals
         self.worker.sig_status_update.connect(self.update_infrastructure_icons)
         self.worker.sig_pc_update.connect(self.update_client_count)
 
-        # 6.5. Listen for config changes (for stealth mode toggle)
+        # 6.5. Listen for config changes
         from models.config_manager import ConfigManager
         ConfigManager.instance().sig_config_changed.connect(self.on_config_changed)
 
@@ -151,29 +158,25 @@ class SystemTrayController(QObject):
         self.worker_thread.started.connect(self.worker.start_monitoring)
         self.worker_thread.start()
 
-        # 7.5. Start Remote Config API
         self.start_api_server()
 
-        # 8. Watchdog Heartbeat (Mutual Monitoring)
+        # 8. Watchdog Heartbeat
         self.watchdog_timer = QTimer(self)
-        self.watchdog_timer.setInterval(5000)  # Check every 5 seconds
+        self.watchdog_timer.setInterval(5000)
         self.watchdog_timer.timeout.connect(self.check_watchdog_status)
         self.watchdog_timer.start()
 
-        # Initial check (don't wait 5s)
         self.check_watchdog_status()
 
     def check_watchdog_status(self):
-        """Periodic heartbeat to ensure watchdog is alive."""
         ensure_watchdog_running()
 
     def start_api_server(self):
-        """Start Flask API server for remote configuration."""
         try:
             api_thread = Thread(
                 target=api_server.run_api_server,
                 args=('0.0.0.0', 5000),
-                daemon=True  # Dies when main app exits
+                daemon=True
             )
             api_thread.start()
             AppLogger.log("Remote Config API started on port 5000", category="SYSTEM")
@@ -202,13 +205,15 @@ class SystemTrayController(QObject):
         self.menu.addAction(self.action_quit)
 
     def update_infrastructure_icons(self, status_dict):
-        # status_dict = {"timestamp": "...", "router": True, "server": False, "internet": True}
         def update_single(key, is_online):
-            data = self.trays[key]
-            tray = data["obj"]
-            tray.setIcon(data["icon_ok"] if is_online else data["icon_bad"])
-            status = "ONLINE" if is_online else "OFFLINE"
-            tray.setToolTip(f"{data['name']}: {status}\nLast Scan: {status_dict['timestamp']}")
+            item = self.trays[key]
+
+            # Check if this specific tray is visible before updating tooltip/icon
+            if item.obj.isVisible():
+                if item.icon_ok and item.icon_bad:
+                    item.obj.setIcon(item.icon_ok if is_online else item.icon_bad)
+                status = "ONLINE" if is_online else "OFFLINE"
+                item.obj.setToolTip(f"{item.name}: {status}\nLast Scan: {status_dict['timestamp']}")
 
         update_single("router", status_dict["router"])
         update_single("server", status_dict["server"])
@@ -217,10 +222,12 @@ class SystemTrayController(QObject):
     def update_client_count(self, pc_data_list):
         online_count = sum(1 for pc in pc_data_list if pc['is_alive'])
         total_count = len(pc_data_list)
-        icon = self.generate_number_icon(online_count)
-        tray = self.trays["clients"]["obj"]
-        tray.setIcon(icon)
-        tray.setToolTip(f"Active Clients: {online_count} / {total_count}")
+
+        item = self.trays["clients"]
+        if item.obj.isVisible():
+            icon = self.generate_number_icon(online_count)
+            item.obj.setIcon(icon)
+            item.obj.setToolTip(f"Active Clients: {online_count} / {total_count}")
 
     def generate_number_icon(self, number):
         size = 64
@@ -229,7 +236,6 @@ class SystemTrayController(QObject):
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Background
         bg_color = QColor("#333333")
         painter.setBrush(QBrush(bg_color))
         painter.setPen(Qt.NoPen)
@@ -276,17 +282,14 @@ class SystemTrayController(QObject):
                 QMessageBox.warning(None, "Access Denied", "Incorrect Password!")
 
     def open_settings_dialog(self):
-        """Open the settings dialog after admin password verification"""
         from PySide6.QtWidgets import QInputDialog, QLineEdit
 
-        # Verify Admin Password
         password, ok = QInputDialog.getText(
             None,
             "Security Check",
             "Enter Admin Password to access Settings:",
             QLineEdit.Password
         )
-
         if ok and password:
             if SecurityManager.verify_admin(password):
                 AppLogger.log("Dialog opened with valid credentials", category="SETTINGS")
@@ -297,14 +300,7 @@ class SystemTrayController(QObject):
                 QMessageBox.warning(None, "Access Denied", "Incorrect Admin Password!")
 
     def apply_stealth_mode(self, config=None):
-        """
-        Checks the current env_state setting and shows/hides tray icons accordingly.
-        Called on startup and when config changes.
-        Args:
-            config (dict, optional): Provide existing config to avoid deadlocks during updates.
-        """
         if config is None:
-            # Only fetch if not provided (safe during startup, unsafe during updates)
             from models.config_manager import ConfigManager
             config = ConfigManager.instance().get_config()
 
@@ -313,28 +309,30 @@ class SystemTrayController(QObject):
         AppLogger.initialize()
         AppLogger.cleanup_old_logs(retention_days)
 
-        # Get env_state setting (default to False if not present)
         self.env_state = config.get("system_settings", {}).get("env_state", False)
 
+        # New: Get visibility dictionary (default to True if not present)
+        visibility = config.get("system_settings", {}).get("tray_visibility", {})
+
         if self.env_state:
-            # STEALTH ON: Hide all tray icons
-            AppLogger.log("Entering Stealth Mode. Tray icons hidden.", category="STEALTH")
-            for key, data in self.trays.items():
-                data["obj"].hide()
+            AppLogger.log("Entering Stealth Mode. ALL Tray icons hidden.", category="STEALTH")
+            for key, item in self.trays.items():
+                item.obj.hide()
         else:
-            # STEALTH OFF: Show all tray icons
-            AppLogger.log("Exiting Stealth Mode. Tray icons visible.", category="STEALTH")
-            for key, data in self.trays.items():
-                data["obj"].show()
+            AppLogger.log("Exiting Stealth Mode. Applying icon visibility settings.", category="STEALTH")
+            for key, item in self.trays.items():
+                # Check individual preference. Default to True if key missing.
+                should_show = visibility.get(key, True)
+
+                if should_show:
+                    item.obj.show()
+                else:
+                    item.obj.hide()
 
     def on_config_changed(self, new_config):
         """
-        Triggered when config is updated remotely or locally.
-        Checks if env_state changed and applies it.
+        Triggered when config is updated.
+        We just re-run apply_stealth_mode, which now handles both global stealth and individual toggles.
         """
-        new_env_state = new_config.get("system_settings", {}).get("env_state", False)
-
-        if new_env_state != self.env_state:
-            AppLogger.log(f"Mode changed from {self.env_state} to {new_env_state}", category="STEALTH")
-            # Pass the config directly to avoid Deadlock
-            self.apply_stealth_mode(config=new_config)
+        AppLogger.log("Config changed. Re-applying tray visibility settings.", category="SYSTEM")
+        self.apply_stealth_mode(config=new_config)
