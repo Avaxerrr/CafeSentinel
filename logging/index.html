@@ -1,0 +1,889 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Technical documentation for the CafeSentinel network monitoring system">
+      
+      
+      
+      
+        <link rel="prev" href="../security/">
+      
+      
+        <link rel="next" href="../features/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Logging - CafeSentinel Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#logging-system" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="CafeSentinel Documentation" class="md-header__button md-logo" aria-label="CafeSentinel Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CafeSentinel Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Logging
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="CafeSentinel Documentation" class="md-nav__button md-logo" aria-label="CafeSentinel Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    CafeSentinel Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Log Rotation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-retention-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Log Retention &amp; Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Log Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smart-api-log-serving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Smart API Log Serving
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Smart API Log Serving">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-rotation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Log Rotation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-retention-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Log Retention &amp; Cleanup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Log Format
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#smart-api-log-serving" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Smart API Log Serving
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Smart API Log Serving">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Access
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="logging-system">Logging System</h1>
+<h2 id="architecture">Architecture</h2>
+<p>Professional 4-phase logging system with rotation, retention, and structured categorization.</p>
+<p><strong>Active Log:</strong>
+- File: <code>info.log</code> (current day only)
+- Updated continuously during application runtime
+- Contains only today's activity
+- Automatically rotated at midnight or when size exceeds 5MB
+- Served via API for real-time monitoring</p>
+<p><strong>Archive:</strong>
+- Directory: <code>probes/</code> subdirectory
+- Contains historical logs from previous days
+- Files automatically deleted based on retention policy
+- Organized by date: <code>info-YYYY-MM-DD.log</code>
+- Manual deletion also available via API</p>
+<p><strong>Memory Buffer:</strong>
+- In-memory circular buffer of last 500 log lines
+- Used for fast API serving without disk I/O
+- Populated as logs are written
+- Provides real-time log access to Manager application</p>
+<h2 id="log-rotation">Log Rotation</h2>
+<p><strong>Daily Rotation:</strong>
+- Occurs at midnight when date changes
+- On application startup if date changed while offline
+- Current <code>info.log</code> renamed to <code>probes/info-YYYY-MM-DD.log</code>
+- Fresh <code>info.log</code> created for new day
+- No data loss during rotation process</p>
+<p><strong>Size-Based Rotation:</strong>
+- Triggered when <code>info.log</code> exceeds 5MB
+- File moved to <code>probes/info-YYYY-MM-DD-HHMMSS.log</code>
+- Fresh <code>info.log</code> created immediately
+- Part number appended if multiple rotations same day
+- Prevents runaway log growth from error loops</p>
+<p><strong>Rotation Process:</strong>
+1. AppLogger detects rotation condition (date change or size limit)
+2. Current <code>info.log</code> renamed with timestamp
+3. Moved to <code>probes/</code> archive directory
+4. New empty <code>info.log</code> created
+5. Logging continues without interruption
+6. Rotation event logged in new file</p>
+<h2 id="log-retention-cleanup">Log Retention &amp; Cleanup</h2>
+<p><strong>Automatic Cleanup:</strong>
+- Configurable retention period via <code>log_retention_days</code> setting (default: 30 days)
+- Cleanup executes automatically on application startup
+- Files in <code>probes/</code> folder older than retention period permanently deleted
+- Deletion bypasses Windows recycle bin (immediate destruction)
+- Cleanup event logged with count of deleted files</p>
+<p><strong>Retention Configuration:</strong>
+- Located in <code>system_settings.log_retention_days</code>
+- Range: 1-365 days recommended
+- Default: 30 days
+- Configurable via Settings Dialog (System tab) or API
+- Changes take effect on next application restart</p>
+<p><strong>Cleanup Process:</strong>
+1. Application starts, reads <code>log_retention_days</code> from config
+2. AppLogger.initialize() called by SystemTrayController
+3. AppLogger.cleanup_old_logs() executes
+4. Scans <code>probes/</code> directory for .log files
+5. Checks file modification timestamp against cutoff date
+6. Deletes files older than retention period
+7. Logs cleanup summary to current day log</p>
+<p><strong>Example Cleanup Log:</strong></p>
+<pre><code>[2025-12-09 17:00:00] [LOGGER] Cleaned up 15 old log files (Retention: 30 days)
+</code></pre>
+<h2 id="log-format">Log Format</h2>
+<p>Each log line follows structured categorized format:</p>
+<pre><code>[YYYY-MM-DD HH:MM:SS] [CATEGORY] Message text
+</code></pre>
+<p><strong>Components:</strong>
+- <strong>Timestamp:</strong> Full date and time in 24-hour format, local timezone
+- <strong>Category:</strong> Structured tag for filtering and color-coding
+- <strong>Message:</strong> Sanitized text without sensitive file paths or internal structure details</p>
+<p><strong>Standard Categories:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SYSTEM</code></td>
+<td>Application startup, shutdown, initialization, API server events, configuration snapshots</td>
+</tr>
+<tr>
+<td><code>CONFIG</code></td>
+<td>Configuration loading, saving, validation, hot-reload events</td>
+</tr>
+<tr>
+<td><code>NETWORK</code></td>
+<td>Network scanning, connectivity checks, target validation, jitter detection</td>
+</tr>
+<tr>
+<td><code>ALERT</code></td>
+<td>Network outages, failures, incidents started</td>
+</tr>
+<tr>
+<td><code>RECOVERY</code></td>
+<td>Network restoration, incident resolution</td>
+</tr>
+<tr>
+<td><code>DISCORD</code></td>
+<td>Discord webhook notifications, delivery status</td>
+</tr>
+<tr>
+<td><code>DAEMON</code></td>
+<td>Monitoring loop lifecycle events</td>
+</tr>
+<tr>
+<td><code>TASK</code></td>
+<td>Scheduled tasks (screenshots, snapshots)</td>
+</tr>
+<tr>
+<td><code>SETTINGS</code></td>
+<td>Settings dialog operations, local configuration changes</td>
+</tr>
+<tr>
+<td><code>STEALTH</code></td>
+<td>Stealth mode toggle events</td>
+</tr>
+<tr>
+<td><code>LOGGER</code></td>
+<td>Log rotation, retention cleanup, archive operations</td>
+</tr>
+<tr>
+<td><code>WATCHDOG</code></td>
+<td>Watchdog process lifecycle events, exit code interpretation, restart operations</td>
+</tr>
+<tr>
+<td><code>ERROR</code></td>
+<td>Exceptions, failures, error conditions</td>
+</tr>
+<tr>
+<td><code>ARCHIVE</code></td>
+<td>Archive file operations (API deletion, retrieval)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example Log Lines:</strong></p>
+<pre><code>[2025-12-09 05:23:15] [SYSTEM] Kernel thread attached (Singleton Mode)
+[2025-12-09 05:23:15] [SYSTEM] Settings Loaded: Interval=2s, Targets=100 PCs
+[2025-12-09 05:23:16] [CONFIG] Updated successfully
+[2025-12-09 05:23:45] [ALERT] Router DOWN | Timer Started
+[2025-12-09 05:23:50] [NETWORK] Router jitter detected (4.2s) - Below threshold (10s).
+[2025-12-09 05:24:12] [RECOVERY] Router Restored | Duration: 0:00:27
+[2025-12-09 05:25:00] [TASK] Capturing Routine Screenshot (60m)
+[2025-12-09 05:25:01] [ERROR] Screenshot Capture Failed: No image data returned (Monitor off?)
+[2025-12-09 06:00:00] [LOGGER] Cleaned up 5 old log files (Retention: 30 days)
+[2025-12-09 08:30:15] [STEALTH] Entering Stealth Mode. Tray icons hidden.
+[2025-12-09 19:00:01] [WATCHDOG] Starting CafeSentinel process (spawn mode).
+[2025-12-09 19:00:03] [WATCHDOG] CafeSentinel exited cleanly (Code 0). Stopping watchdog.
+</code></pre>
+<h2 id="smart-api-log-serving">Smart API Log Serving</h2>
+<p><strong>Intelligent Serving Strategy:</strong>
+- API endpoint <code>/api/logs</code> uses smart switching based on request size
+- Requests ≤500 lines: Served from memory buffer (fast, no disk I/O)
+- Requests &gt;500 lines: Read from disk <code>info.log</code> (complete history)
+- Provides optimal balance between speed and visibility</p>
+<p><strong>Memory Buffer Serving (Fast Path):</strong>
+- Query: <code>GET /api/logs?lines=200</code>
+- Source: In-memory circular buffer (last 500 lines)
+- Response time: &lt;10ms
+- Use case: Real-time monitoring, live log tail</p>
+<p><strong>Disk Serving (Deep History):</strong>
+- Query: <code>GET /api/logs?lines=2000</code>
+- Source: Current day <code>info.log</code> file on disk
+- Response time: 50-200ms depending on file size
+- Use case: Complete daily history, incident investigation</p>
+<p><strong>Query Parameters:</strong>
+- <code>?lines=N</code>: Request N lines (default: 500, min: 10, max: 5000)
+- Clamped to safe range to prevent excessive memory usage
+- Returns actual line count in response (may be less than requested)</p>
+<p><strong>Response Format:</strong></p>
+<pre><code>{
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;lines&quot;: 2000,
+  &quot;source&quot;: &quot;disk&quot;,
+  &quot;logs&quot;: [&quot;...&quot;]
+}
+</code></pre>
+<p><strong>Fallback Behavior:</strong>
+- If disk read fails, automatically falls back to memory buffer
+- Errors logged but service continues
+- Manager application always receives some data</p>
+<h3 id="api-access">API Access</h3>
+<p><strong>Real-Time Logs (GET /api/logs):</strong>
+- Returns today's log lines with smart RAM/Disk switching
+- Query parameter: <code>?lines=500</code> (default 500, max 5000)
+- Fast response for small requests (&lt;500 lines)
+- Complete history for large requests (&gt;500 lines)
+- Used by Manager for live monitoring and history review</p>
+<p><strong>Archive List (GET /api/logs/archive):</strong>
+- Returns array of archived log filenames
+- Sorted newest first
+- Filenames only (content not included)
+- Used by Manager for archive browser</p>
+<p><strong>Archive Retrieval (GET /api/logs/archive/<filename>):</strong>
+- Returns complete content of specific archived log
+- Filename from archive list
+- Path traversal protection enforced
+- Used by Manager to view historical logs</p>
+<p><strong>Archive Deletion (DELETE /api/logs/archive/<filename>):</strong>
+- Permanently deletes archived log file
+- No recycle bin, immediate destruction
+- Requires exact filename from archive list
+- Returns error if file in use or not found
+- Security: Only allows deletion of files matching <code>info-*.log</code> pattern</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>

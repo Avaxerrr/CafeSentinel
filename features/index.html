@@ -1,0 +1,1110 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Technical documentation for the CafeSentinel network monitoring system">
+      
+      
+      
+      
+        <link rel="prev" href="../logging/">
+      
+      
+        <link rel="next" href="../deployment/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Features - CafeSentinel Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#features-ui" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="CafeSentinel Documentation" class="md-header__button md-logo" aria-label="CafeSentinel Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            CafeSentinel Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Features
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="CafeSentinel Documentation" class="md-nav__button md-logo" aria-label="CafeSentinel Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    CafeSentinel Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../logging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#screenshot-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screenshot System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Screenshot System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#capture-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture Process
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capture Process">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asynchronous Uploads
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#capture-triggers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture Triggers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discord-upload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discord Upload
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#discord-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discord Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Discord Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#webhook-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Webhook Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-batching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Batching
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#local-settings-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local Settings Dialog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Local Settings Dialog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interface-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Save Process
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-tray-controller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Tray Controller
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#screenshot-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Screenshot System
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Screenshot System">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#capture-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture Process
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Capture Process">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#asynchronous-uploads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Asynchronous Uploads
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#capture-triggers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Capture Triggers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#discord-upload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discord Upload
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#discord-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discord Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Discord Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#webhook-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Webhook Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#notification-batching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notification Batching
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#local-settings-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local Settings Dialog
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Local Settings Dialog">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interface-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#save-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Save Process
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#system-tray-controller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Tray Controller
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="features-ui">Features &amp; UI</h1>
+<h2 id="screenshot-system">Screenshot System</h2>
+<h3 id="capture-process">Capture Process</h3>
+<p>Captures primary monitor using mss library with post-processing.</p>
+<p><strong>Capture Pipeline:</strong>
+1. Identify primary monitor via mss.mss()
+2. Capture raw pixels to memory
+3. Convert to PIL Image object
+4. Resize according to <code>resize_ratio</code> setting (1.0 = original, 0.5 = half size)
+5. Compress to WebP format with configured quality (1-100)
+6. Store in memory buffer (not saved to disk)
+7. Send directly to Discord webhook as file attachment</p>
+<p><strong>WebP Format Benefits:</strong>
+- Better compression than JPEG at equivalent quality
+- Smaller file sizes reduce upload time and Discord storage
+- Maintains transparency support (though not used currently)</p>
+<h4 id="asynchronous-uploads">Asynchronous Uploads</h4>
+<p>Routine and incident screenshots are now uploaded asynchronously using background threads so that the main monitoring loop never blocks on HTTP network operations. The worker captures the image in the main thread (fast, &lt;100ms), then hands the in‑memory WebP bytes to a dedicated upload thread that sends the data to Discord webhooks (slow, 2-5 seconds). If capture fails and no image data is produced, an error log entry is written instead of silently skipping the upload.</p>
+<p><strong>Benefits:</strong>
+- Prevents monitoring delays during Discord uploads
+- Eliminates "Slow Scan Loop" warnings caused by screenshot uploads
+- Maintains consistent 2-second monitoring interval even during network congestion
+- Failed captures are now logged for troubleshooting (e.g., monitor turned off)</p>
+<p><strong>Example Logs:</strong></p>
+<pre><code>[2025-12-09 19:28:28] [TASK] Capturing Routine Screenshot (1m)
+[2025-12-09 19:29:29] [TASK] Capturing Routine Screenshot (1m)
+[2025-12-09 19:30:15] [ERROR] Screenshot Capture Failed: No image data returned (Monitor off?)
+[2025-12-09 19:35:00] [ERROR] Incident Screenshot Failed: No image data returned
+</code></pre>
+<h3 id="capture-triggers">Capture Triggers</h3>
+<p><strong>Routine Scheduled Capture:</strong>
+- Interval set via <code>screenshot_settings.interval_minutes</code>
+- Timer tracks time since last capture
+- Triggers when interval elapsed
+- Continues until disabled or privacy mode enabled</p>
+<p><strong>Incident Documentation:</strong>
+- Automatically captured when network outage resolves
+- Provides visual evidence of recovery time
+- Includes network status in Discord embed
+- Helps diagnose issues visible on client screens</p>
+<p><strong>Privacy Mode:</strong>
+- Toggle via privacy password from system tray
+- Disables all screenshot capture when active
+- Routine and incident captures both blocked
+- Visual indicator in system tray when enabled</p>
+<h3 id="settings">Settings</h3>
+<ul>
+<li><strong>Enabled:</strong> Master toggle for screenshot system</li>
+<li><strong>Interval:</strong> Minutes between routine captures (1-1440)</li>
+<li><strong>Quality:</strong> WebP compression quality (1-100, higher = better quality/larger file)</li>
+<li><strong>Resize Ratio:</strong> Scale factor (1.0 = full size, 0.5 = half dimensions, 0.25 = quarter)</li>
+</ul>
+<h3 id="discord-upload">Discord Upload</h3>
+<p>Screenshots sent to Discord via webhook with rich embed.</p>
+<p><strong>Upload Process:</strong>
+1. Image data in memory buffer
+2. Background thread performs HTTP POST to webhook URL with multipart/form-data
+3. Embed includes: timestamp, shop name, trigger type
+4. File attachment: <code>screenshot.webp</code>
+5. Color coding: blue (routine), green (incident recovery)</p>
+<h2 id="discord-integration">Discord Integration</h2>
+<h3 id="webhook-configuration">Webhook Configuration</h3>
+<p>Three separate webhook URLs for different notification types.</p>
+<p><strong>Webhook Types:</strong>
+- <strong>Alerts:</strong> Network outages and restorations
+- <strong>Occupancy:</strong> PC session starts/ends, hourly snapshots
+- <strong>Screenshots:</strong> Routine and incident captures</p>
+<p><strong>Configuration:</strong>
+- URLs stored encrypted in <code>cscf.dll</code>
+- Each webhook can point to different channel or same channel
+- Webhooks optional (system works without Discord notifications)\
+- Invalid/missing webhooks logged but do not crash application</p>
+<h3 id="notification-format">Notification Format</h3>
+<p>All Discord messages use rich embeds with structured data.</p>
+<p><strong>Embed Components:</strong>
+- <strong>Title:</strong> Event description (e.g., "Router Outage Resolved")
+- <strong>Description:</strong> Detailed information and timestamps
+- <strong>Color:</strong> Visual coding (red = outage, green = recovery, blue = routine)
+- <strong>Footer:</strong> Shop name and system identifier
+- <strong>Timestamp:</strong> ISO 8601 format for accurate timing
+- <strong>Fields:</strong> Structured key-value pairs for duration, affected systems, etc.</p>
+<p><strong>Alert Examples:</strong></p>
+<p>Router Outage:</p>
+<pre><code>Title: Router Connection Lost
+Color: Red
+Description: Connectivity to router lost at [timestamp]
+Fields: Duration (when resolved), Verification attempts
+</code></pre>
+<p>PC Session Start:</p>
+<pre><code>Title: Client PC Online
+Color: Green  
+Description: PC [IP] came online
+Fields: Timestamp, Total active PCs
+</code></pre>
+<p>Hourly Snapshot:</p>
+<pre><code>Title: Occupancy Report
+Color: Blue
+Description: Current occupancy status
+Fields: Active PCs, Percentage occupied, Peak today
+</code></pre>
+<h3 id="notification-batching">Notification Batching</h3>
+<p>SessionManager batches occupancy notifications to avoid spam.</p>
+<p><strong>Batching Rules:</strong>
+- Multiple state changes within batch delay window grouped together
+- Single notification sent after delay expires
+- Includes count of affected PCs
+- Reduces notification volume during busy periods (e.g., opening/closing time)</p>
+<p><strong>Configuration:</strong>
+- <code>batch_delay_seconds</code>: Time window for batching (default 30)
+- Balance between responsiveness and notification volume
+- Set to 1 for immediate individual notifications
+- Set to 300 (5 minutes) for heavily batched reports</p>
+<h2 id="local-settings-dialog">Local Settings Dialog</h2>
+<h3 id="overview">Overview</h3>
+<p>Password-protected GUI for on-site configuration without Manager application.</p>
+<p><strong>Access Method:</strong>
+- Right-click any system tray icon
+- Select "Settings" from context menu
+- Enter admin password
+- Settings dialog opens</p>
+<p><strong>Purpose:</strong>
+- Emergency configuration changes when Manager unavailable
+- On-site adjustments by authorized personnel
+- No remote network connection required
+- Uses same ConfigManager as API (changes synchronized)</p>
+<h3 id="interface-structure">Interface Structure</h3>
+<p>Four-tab layout covering all configuration sections.</p>
+<p><strong>Network Tab:</strong>
+- Network Targets: Router IP, Server IP, Internet test IP
+- Verification Settings: Retry delay, Secondary DNS, Min incident duration</p>
+<p><strong>Monitoring Tab:</strong>
+- Scan Settings: Check interval, PC subnet, PC start range, PC count
+- Screenshots: Enable toggle, Interval, Quality, Resize ratio
+- Occupancy: Enable toggle, Hourly snapshots, Min session duration, Batch delay</p>
+<p><strong>Discord Tab:</strong>
+- Enable toggle for notifications
+- Shop name for embed footers
+- Three webhook URLs: Alerts, Occupancy, Screenshots</p>
+<p><strong>System Tab:</strong>
+- Stealth Mode: Enable/disable system tray icons
+- Log Retention: Days to keep archived logs (1-365)</p>
+<h3 id="save-process">Save Process</h3>
+<ol>
+<li>User modifies settings in form fields</li>
+<li>Clicks "Save Changes" button</li>
+<li>Form data collected into config dictionary</li>
+<li>ConfigManager validates configuration</li>
+<li>If valid: Encrypt, save to <code>cscf.dll</code>, trigger hot-reload</li>
+<li>If invalid: Display error message, prevent save</li>
+<li>Success dialog confirms changes applied</li>
+<li>Changes take effect within 2 seconds</li>
+</ol>
+<h3 id="security">Security</h3>
+<ul>
+<li>Admin password required for access</li>
+<li>Password verified via SecurityManager before opening dialog</li>
+<li>Incorrect password displays "Access Denied" message</li>
+<li>Dialog remains open until user closes (no timeout)</li>
+<li>Changes logged but no sensitive data included in logs</li>
+</ul>
+<h2 id="system-tray-controller">System Tray Controller</h2>
+<p><strong>Stealth Mode (Headless Operation):</strong>
+- <strong>Implementation:</strong> Configurable via <code>env_state</code> boolean in <code>system_settings</code>.
+- <strong>Behavior:</strong>
+  - <strong>Enabled (<code>True</code>):</strong> Application runs normally but hides all system tray icons.
+  - <strong>Disabled (<code>False</code>):</strong> Standard system tray icons are visible.
+- <strong>Persistence:</strong> App is configured with <code>setQuitOnLastWindowClosed(False)</code> to ensure the process continues running even without visible UI elements.
+- <strong>Toggle Mechanism:</strong> Can be toggled remotely via API (Manager App) or locally via Settings Dialog (if accessible). Updates apply immediately via hot-reload.</p>
+<p><strong>System Tray Icons:</strong>
+- Router: green (online) / red (offline)
+- Server: green (online) / red (offline)<br />
+- Internet: green (online) / red (offline)
+- Clients: displays active PC count with dynamic icon generation</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+    
+  </body>
+</html>
