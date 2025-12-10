@@ -18,6 +18,7 @@ from views.settings_pages.monitoring_page import MonitoringPage
 from views.settings_pages.discord_page import DiscordPage
 from views.settings_pages.system_page import SystemPage
 
+
 class SettingsDialog(QDialog):
     """
     Local settings configuration dialog.
@@ -65,7 +66,6 @@ class SettingsDialog(QDialog):
         self.add_nav_item("Monitoring", ":/icons/nav_monitoring")
         self.add_nav_item("Discord", ":/icons/nav_discord")
         self.add_nav_item("System Settings", ":/icons/nav_system")
-
 
         # --- Right Content Stack ---
         self.pages_stack = QStackedWidget()
@@ -179,6 +179,33 @@ class SettingsDialog(QDialog):
             new_config.update(self.monitoring_page.get_data())
             new_config.update(self.discord_page.get_data())
             new_config.update(self.system_page.get_data())
+
+            # --- GUARD RAIL: Stealth Mode Warning ---
+            # Check if Stealth Mode is being ENABLED (was False, becoming True)
+            old_stealth = self.config.get("system_settings", {}).get("env_state", False)
+            new_stealth = new_config.get("system_settings", {}).get("env_state", False)
+
+            if new_stealth and not old_stealth:
+                warning_msg = (
+                    "⚠️ <b>CRITICAL WARNING: Stealth Mode</b><br><br>"
+                    "You are about to enable <b>Stealth Mode</b>. This will hide all System Tray icons.<br>"
+                    "If you do not have the Manager App connected, <b>you may be locked out</b> "
+                    "of these settings.<br><br>"
+                    "The only way to recover access without the Manager App is to manually reset "
+                    "the application.<br><br>"
+                    "Are you sure you want to proceed?"
+                )
+
+                reply = QMessageBox.question(
+                    self,
+                    "Confirm Stealth Mode",
+                    warning_msg,
+                    QMessageBox.Yes | QMessageBox.No,
+                    QMessageBox.No
+                )
+
+                if reply == QMessageBox.No:
+                    return  # Cancel save
 
             # 3. Save Phase
             success, message = self.cfg_mgr.update_config(new_config)

@@ -296,13 +296,17 @@ class SystemTrayController(QObject):
                 from PySide6.QtWidgets import QMessageBox
                 QMessageBox.warning(None, "Access Denied", "Incorrect Admin Password!")
 
-    def apply_stealth_mode(self):
+    def apply_stealth_mode(self, config=None):
         """
         Checks the current env_state setting and shows/hides tray icons accordingly.
         Called on startup and when config changes.
+        Args:
+            config (dict, optional): Provide existing config to avoid deadlocks during updates.
         """
-        from models.config_manager import ConfigManager
-        config = ConfigManager.instance().get_config()
+        if config is None:
+            # Only fetch if not provided (safe during startup, unsafe during updates)
+            from models.config_manager import ConfigManager
+            config = ConfigManager.instance().get_config()
 
         retention_days = config.get("system_settings", {}).get("log_retention_days", 30)
 
@@ -332,4 +336,5 @@ class SystemTrayController(QObject):
 
         if new_env_state != self.env_state:
             AppLogger.log(f"Mode changed from {self.env_state} to {new_env_state}", category="STEALTH")
-            self.apply_stealth_mode()
+            # Pass the config directly to avoid Deadlock
+            self.apply_stealth_mode(config=new_config)
