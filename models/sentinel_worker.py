@@ -72,7 +72,9 @@ class SentinelWorker(QObject):
     def _update_settings(self):
         """Central place to update local vars from config."""
         # Screenshot
-        self.screenshot_interval = self.config.get('screenshot_settings', {}).get('interval_minutes', 60)
+        ss_settings = self.config.get('screenshot_settings', {})
+        self.screenshot_interval = ss_settings.get('interval_minutes', 60)
+        self.screenshot_enabled = ss_settings.get('enabled', True)  # <--- NEW CHECK
 
         # Verification
         verify = self.config.get('verification_settings', {})
@@ -96,6 +98,11 @@ class SentinelWorker(QObject):
         return [f"{subnet}.{start + i}" for i in range(count)]
 
     def handle_routine_screenshot(self):
+        # 1. Check if disabled globally
+        if not self.screenshot_enabled:
+            return
+
+        # 2. Check privacy mode
         if self.privacy_mode:
             return
 
@@ -174,10 +181,12 @@ class SentinelWorker(QObject):
             AppLogger.log(f"{name} Restored | Duration: {duration_str}", category="RECOVERY")
             EventLogger.log_resolution(down_start_time, now, f"{name}_DOWN")
 
-            img_data, _ = self.camera.capture_to_memory()
-
-            if not img_data:
-                AppLogger.log("Incident Screenshot Failed: No image data returned", category="ERROR")
+            # Capture incident screenshot (Only if enabled)
+            img_data = None
+            if self.screenshot_enabled:
+                img_data, _ = self.camera.capture_to_memory()
+                if not img_data:
+                    AppLogger.log("Incident Screenshot Failed: No image data returned", category="ERROR")
 
             upload_thread = threading.Thread(
                 target=self.notifier.send_outage_report,
@@ -204,6 +213,10 @@ class SentinelWorker(QObject):
         while self.running:
             loop_start = time.time()
             timestamp = datetime.now().strftime("%H:%M:%S")
+
+            # Track if we performed a long operation (like verification sleep)
+            # so we don't log a false "Slow Loop" warning
+            verification_occurred = False
 
             try:
                 # FG_WATCH: Dirty flag checking
@@ -235,9 +248,12 @@ class SentinelWorker(QObject):
                 if not router_ok:
                     if not self._verify_component(router_ip, "ROUTER"):
                         router_ok = True
+                    verification_occurred = True
+
                 if not server_ok:
                     if not self._verify_component(server_ip, "SERVER"):
                         server_ok = True
+                    verification_occurred = True
 
                 internet_ok = False
                 if not router_ok:
@@ -246,6 +262,7 @@ class SentinelWorker(QObject):
                     if not internet_raw_ok:
                         if not self._verify_component(internet_ip, "INTERNET"):
                             internet_ok = True
+                        verification_occurred = True
                     else:
                         internet_ok = True
 
@@ -292,7 +309,8 @@ class SentinelWorker(QObject):
             elapsed = time.time() - loop_start
             interval = self.config.get('monitor_settings', {}).get('interval_seconds', 2)
 
-            if elapsed > (interval + 1.0):
+            # Only log slow loop if we DIDN'T purposely sleep for verification
+            if elapsed > (interval + 1.0) and not verification_occurred:
                 AppLogger.log(
                     f"Slow Scan Loop Detected: {elapsed:.2f}s (Target: {interval}s)",
                     category="SYSTEM"
